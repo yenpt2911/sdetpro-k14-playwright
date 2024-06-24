@@ -3,6 +3,8 @@ import OrderComputerFlow from '../../test-flows/computer/OrderComputerFlow';
 import CheapComputerComponent from '../../modules/components/computer/CheapComputerComponent';
 import testData from '../../test-data/computer/CheapComputerData.json';
 import ShoppingCartPage from '../../modules/pages/ShoppingCartPage';
+import PAYMENT_METHOD from '../../constants/Payment';
+import CREDIT_CARD_TYPE from '../../constants/CreditCardType';
 
 
 test('Test Cheap computer component', async ({ page }) => {
@@ -14,5 +16,10 @@ test('Test Cheap computer component', async ({ page }) => {
     await computerFlow.inputBillingAddress();
     await computerFlow.inputShippingAddress();
     await computerFlow.selectShippingMethod();
+    await computerFlow.selectPaymentMethod(PAYMENT_METHOD.creditCard);
+    await computerFlow.inputPaymentInformation(CREDIT_CARD_TYPE.discover);
+    await computerFlow.confirmOrder();
+
+    await page.waitForTimeout(3 * 1000);
 
 })

@@ -4,6 +4,9 @@ import CheckoutDetailsComponent from "./CheckoutDetailsComponent";
 
 @selector("#opc-billing")
 export default class BillingAddressComponent extends CheckoutDetailsComponent {
+    static selectorValue(selectorValue: any): any {
+        throw new Error("Method not implemented.");
+    }
     protected component: Locator;
 
     private readonly firstnameSel = '#BillingNewAddress_FirstName';

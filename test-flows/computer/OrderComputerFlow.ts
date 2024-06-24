@@ -1,13 +1,18 @@
 import { Page } from "@playwright/test"
+import defaultCheckoutUser from "../../test-data/DefaultCheckoutUser.json"
+import defaultCheckoutCard from "../../test-data/DefaultCheckoutCardData.json"
 import ComputerDetailsPage, { ComputerComponentConstructor } from "../../modules/pages/ComputerDetailsPage";
 import ComputerEssentialComponent from "../../modules/components/computer/ComputerEssentialComponent";
 import ShoppingCartPage from "../../modules/pages/ShoppingCartPage";
 import CheckoutOptionsPage from "../../modules/pages/CheckoutOptionsPage";
-import defaultCheckoutUser from "../../test-data/DefaultCheckoutUser.json"
 import CheckoutPage from "../../modules/pages/CheckoutPage";
 import BillingAddressComponent from "../../modules/components/checkout/BillingAddressComponent";
 import ShippingAddressComponent from "../../modules/components/checkout/ShippingAddressComponent";
 import ShippingMethodComponent from "../../modules/components/checkout/ShippingMethodComponent";
+import PaymentMethodComponent from "../../modules/components/checkout/PaymentMethodComponent";
+import PAYMENT_METHOD from "../../constants/Payment";
+import PaymentInformationComponent from "../../modules/components/checkout/PaymentInformationComponent";
+
 
 
 export default class OrderComputerFlow {
@@ -96,7 +101,7 @@ export default class OrderComputerFlow {
         await this.page.waitForTimeout(3 * 1000);
     }
 
-    public async inputBillingAddress(): Promise<void>{
+    public async inputBillingAddress(): Promise<void> {
         const { firstName, lastName, email, country, state, city, add1, zipCode, phoneNum } = defaultCheckoutUser;
         const checkoutPage: CheckoutPage = new CheckoutPage(this.page);
         const billingAddressComponent: BillingAddressComponent = checkoutPage.billingAddressComponent();
@@ -133,6 +138,45 @@ export default class OrderComputerFlow {
 
         await shippingMethodComponent.clickOnContinueButton();
 
+    }
+
+    public async selectPaymentMethod(paymentMethod: string): Promise<void> {
+        const checkoutPage: CheckoutPage = new CheckoutPage(this.page);
+        const paymentMethodComponent: PaymentMethodComponent = checkoutPage.paymentMethodComponent();
+        switch (paymentMethod) {
+            case PAYMENT_METHOD.cod:
+                await paymentMethodComponent.selectCODMethod();
+                break;
+            case PAYMENT_METHOD.checkMoneyOrder:
+                await paymentMethodComponent.selectCheckMoneyOrder();
+                break;
+            case PAYMENT_METHOD.creditCard:
+                await paymentMethodComponent.selectCreditCard();
+                break;
+            case PAYMENT_METHOD.purchaseOrder:
+                await paymentMethodComponent.selectPurchaseOrder();
+                break;
+        }
+        await paymentMethodComponent.clickOnContinueButton();
+    }
+
+
+    public async inputPaymentInformation(creditCardType: string) {
+        const checkoutPage: CheckoutPage = new CheckoutPage(this.page);
+        const paymentInformationComponent: PaymentInformationComponent = checkoutPage.paymentInformationComponent();
+        const { firstName, lastName } = defaultCheckoutUser;
+        const { expirationMonth, expirationYear, cardNumber, cardCode } = defaultCheckoutCard;
+        await paymentInformationComponent.selectCardType(creditCardType);
+        await paymentInformationComponent.inputCardNumber(cardNumber);
+        await paymentInformationComponent.inputCardHolderName(firstName + " " + lastName);
+        await paymentInformationComponent.selectExpirationMonth(expirationMonth);
+        await paymentInformationComponent.selectExpirationYear(expirationYear);
+        await paymentInformationComponent.inputCardCode(cardCode);
+        await paymentInformationComponent.clickOnContinueButton();
+    }
+
+    public async confirmOrder() {
+        await new CheckoutPage(this.page).confirmOrderComponent().clickOnConfirmButton();
     }
 
     private extractAdditionalPrice(fullText: string): number {
