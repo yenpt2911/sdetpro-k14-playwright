@@ -1,4 +1,4 @@
-import { Page } from "@playwright/test"
+import { Page, expect } from "@playwright/test"
 import defaultCheckoutUser from "../../test-data/DefaultCheckoutUser.json"
 import defaultCheckoutCard from "../../test-data/DefaultCheckoutCardData.json"
 import ComputerDetailsPage, { ComputerComponentConstructor } from "../../modules/pages/ComputerDetailsPage";
@@ -13,7 +13,11 @@ import PaymentMethodComponent from "../../modules/components/checkout/PaymentMet
 import PAYMENT_METHOD from "../../constants/Payment";
 import PaymentInformationComponent from "../../modules/components/checkout/PaymentInformationComponent";
 
-
+/***
+ * .locator: expect(locatorTYPE).method
+ * .generic: expect(actualValue).methodName(expectedValue)
+ * .for Page: expect(pageTYPE).
+*/
 
 export default class OrderComputerFlow {
 
@@ -84,10 +88,15 @@ export default class OrderComputerFlow {
             const quantity = await cartItemRowComponent.quantity();
             const subTotal = await cartItemRowComponent.subTotal();
             console.log(`unitPrice: ${unitPrice}, quantity: ${quantity}, subTotal: ${subTotal}`);
+            expect(unitPrice * quantity).toBe(subTotal);
         }
         const priceCategories = await totalComponent.priceCategories();
-        console.log(`priceCategories: ${JSON.stringify(priceCategories)}`);
-
+        const subTotal = priceCategories["Sub-Total:"];
+        const shippingFee = priceCategories["Shipping:"];
+        const tax = priceCategories["Tax:"];
+        const total = priceCategories["Total:"];
+        expect(total).toBe(subTotal + shippingFee + tax);
+        expect(total).toBe(this.totalPrice);
     }
 
     public async agreeTOSAndCheckout(): Promise<void> {
@@ -105,6 +114,7 @@ export default class OrderComputerFlow {
         const { firstName, lastName, email, country, state, city, add1, zipCode, phoneNum } = defaultCheckoutUser;
         const checkoutPage: CheckoutPage = new CheckoutPage(this.page);
         const billingAddressComponent: BillingAddressComponent = checkoutPage.billingAddressComponent();
+        await billingAddressComponent.selectInputNewAddress();
         await billingAddressComponent.inputFirstname(firstName);
         await billingAddressComponent.inputLastname(lastName)
         await billingAddressComponent.inputEmailAddress(email);

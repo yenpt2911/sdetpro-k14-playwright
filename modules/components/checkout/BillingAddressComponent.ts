@@ -9,6 +9,7 @@ export default class BillingAddressComponent extends CheckoutDetailsComponent {
     }
     protected component: Locator;
 
+    private readonly inputAddressDropdownSel = '#billing-address-select';
     private readonly firstnameSel = '#BillingNewAddress_FirstName';
     private readonly lastnameSel = '#BillingNewAddress_LastName';
     private readonly emailAddressSel = '#BillingNewAddress_Email';
@@ -24,6 +25,13 @@ export default class BillingAddressComponent extends CheckoutDetailsComponent {
         this.component = component;
     }
 
+    public async selectInputNewAddress() {
+        const inputSelectDropDownEle = await this.component.locator(this.inputAddressDropdownSel);
+        const isUsingExistingAddDropdownDisplayed = await inputSelectDropDownEle.count() > 0;
+        if (isUsingExistingAddDropdownDisplayed) {
+            await inputSelectDropDownEle.selectOption({ label: "New Address" });
+        }
+    }
     public async inputFirstname(firstname: string): Promise<void> {
         await this.component.locator(this.firstnameSel).fill(firstname);
     }
