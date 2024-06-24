@@ -13,6 +13,11 @@ test('Handle Dropdown option', async ({ page }) => {
     // Select option2
     await dropdownEle.selectOption({ value: '2' });
     await page.waitForTimeout(1000);
+
+    // Select option 1 again using label - similary with select by text in selenium
+    await dropdownEle.selectOption({ label: 'Option 1' });
+    await page.waitForTimeout(1000);
+
 })
 
 test('Handle Iframe', async ({ page }) => {
@@ -50,14 +55,14 @@ test('Mouse hover and narrowdown searching scope', async ({ page }) => {
 
         // and narrowdown searching scope
         const imgEle = figureEle.locator('img');
-        
+
         const usernameEle = await figureEle.locator('h5');
         const viewProfileHyperlinkEle = await figureEle.locator('a');
         const isUsernameVisible = await usernameEle.isVisible();
         const isViewProfileHyperlinkVisible = await viewProfileHyperlinkEle.isVisible();
         console.log(`isUsernameVisible: ${isUsernameVisible}`);
         console.log(`isViewProfileHyperlinkVisible: ${isViewProfileHyperlinkVisible}`);
-        
+
 
         // Mouse hover
         await imgEle.hover();
@@ -67,7 +72,7 @@ test('Mouse hover and narrowdown searching scope', async ({ page }) => {
         console.log(`isUsernameVisibleAfter: ${isUsernameVisibleAfter}`);
         console.log(`isViewProfileHyperlinkVisibleAfter: ${isViewProfileHyperlinkVisibleAfter}`);
 
-        
+
 
         await page.waitForTimeout(2000);
     }
@@ -78,7 +83,7 @@ test.only('Checking element status and handle dynamic states', async ({ page }) 
 
     // Locate 2 parent components
     const checkboxComp = await page.locator('#checkbox-example');
-    
+
     // Interact with the checkbox component
     const checkboxEle = await checkboxComp.locator('#checkbox input');
     const isEnabled = await checkboxEle.isEnabled();
@@ -107,7 +112,7 @@ test.only('Checking element status and handle dynamic states', async ({ page }) 
     let isDisabled = await inputEle.isDisabled();
 
     const enableBtnEle = await inputExampleComp.locator("//button[@type='button']");
-    
+
 
     if (isDisabled) {
         await enableBtnEle.click();
