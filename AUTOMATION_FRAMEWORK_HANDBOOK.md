@@ -42,16 +42,53 @@ Tu `package.json`, dependency chinh hien tai la:
 
 - `@playwright/test`
 
-Hien tai khong co:
+### 2.2.1 Thu vien toi thieu can co cho 1 Playwright automation project
 
-- `pom.xml`
-- `testng.xml`
-- Maven/Gradle
-- Allure
-- dotenv dang active
-- custom logger framework
+Neu xay framework Playwright o muc co the maintain va mo rong duoc, toi khuyen nghi chia thu vien thanh 3 nhom:
 
-Ket luan: day la Playwright project thuoc he JavaScript/TypeScript, khong phai Java TestNG framework.
+#### Nhom bat buoc
+
+- `@playwright/test`: test runner, fixtures, assertions, projects, trace, screenshot, video
+- `typescript`: type safety cho framework code
+- `@types/node`: typing cho Node.js environment
+
+Day la bo toi thieu de xay 1 project nghiem tuc, ngay ca khi project chua can thu vien phu tro nao khac.
+
+#### Nhom rat nen co
+
+- `dotenv`: quan ly bien moi truong nhu `BASE_URL`, account test, feature flags
+- `zod` hoac `joi`: validate shape cua test data JSON
+- `faker` hoac `@faker-js/faker`: sinh data test dong
+- `eslint`: giu code framework sach va dong nhat
+- `prettier`: chuan hoa format code
+
+#### Nhom tuy chon theo nhu cau du an
+
+- `allure-playwright`: neu can report manh hon report mac dinh
+- `playwright-qase-reporter` hoac reporter khac: neu can tich hop test management
+- `axios`: neu can API-assisted setup/cleanup
+- `cross-env`: neu can chay scripts cross-platform voi env vars
+
+### 2.2.2 Danh gia repo hien tai theo bo thu vien can co
+
+Repo hien tai moi co:
+
+- `@playwright/test`
+
+Framework hien tai dang chay theo huong toi gian:
+
+- Playwright runner la dependency chinh
+- file test/framework viet theo TypeScript syntax
+- chua co bo tooling day du cho TypeScript/lint/format/env validation
+
+Dieu nay phu hop voi muc tieu hoc va thuc hanh framework, nhung neu muon maintain lau dai hon thi nen bo sung:
+
+1. `typescript`
+2. `@types/node`
+3. `dotenv`
+4. `zod`
+5. `eslint`
+6. `prettier`
 
 ### 2.3 Kien truc tong the
 
@@ -150,6 +187,10 @@ Luu y: y tuong tot, nhung implementation hien tai con rat nhe va chua co type sa
 
 ## 3. Cau truc thu muc
 
+### 3.0 Structure project hien tai
+
+Duoi day la structure thuc te cua repo o thoi diem phan tich:
+
 ```text
 .
 |-- e2e/
@@ -167,26 +208,158 @@ Luu y: y tuong tot, nhung implementation hien tai con rat nhe va chua co type sa
 |-- test-data/
 |   |-- DefaultCheckoutUser.json
 |   `-- computer/
+|       |-- CheapComputerData.json
+|       `-- StandardComputerData.json
 |-- test-flows/
 |   `-- computer/
+|       `-- OrderComputerFlow.ts
 |-- tests/
 |   |-- computer/
+|   |   |-- CheapComputerTest.spec.ts
+|   |   `-- StandardComputerTest.spec.ts
 |   `-- global/
 |-- utils/
+|   |-- AdHelper.ts
+|   `-- PageHelper.ts
 |-- playwright.config.js
 |-- playwright.config.ts
+|-- README.md
+|-- README_AUTOMATION_PROJECT.md
 `-- package.json
 ```
 
-### Y nghia tung khu vuc
+### 3.1 Y nghia structure hien tai
 
-- `tests/`: noi dat spec file
-- `test-data/`: data JSON cho scenario
-- `test-flows/`: business flow dung lai duoc
-- `modules/pages/`: page object cap trang
-- `modules/components/`: component object cap widget/section
-- `utils/`: helper functions
-- `e2e/`: folder theo config TS cu, hien khong phai entry point chinh
+Structure hien tai dang phan tach theo dung huong cua 1 UI automation framework co tang lop:
+
+- `tests/`: chua spec file va scenario
+- `test-data/`: chua input data JSON
+- `test-flows/`: chua business flows dung lai duoc
+- `modules/pages/`: chua page objects
+- `modules/components/`: chua component objects va base components
+- `utils/`: helper functions nho
+- `e2e/`: folder con lai tu config Playwright cu, hien khong phai diem chay chinh
+
+Neu chi dung theo structure hien tai, framework nay da du de hoc, maintain co ban va phat trien tiep tren domain UI testing.
+
+### 3.2 Structure nen bo sung neu muon nang cap framework
+
+Neu muon nang cap tu structure hien tai len muc production-friendly hon, co the bo sung them cac folder sau:
+
+```text
+project-root/
+|-- fixtures/
+|-- constants/
+|-- types/
+|-- storage-states/
+|-- snapshots/
+|-- tsconfig.json
+|-- eslint.config.js
+|-- .env
+`-- .env.example
+```
+
+Y nghia cac phan nen bo sung:
+
+- `fixtures/`: custom Playwright fixtures
+- `constants/`: selector constants, route constants, message constants, timeout constants
+- `types/`: interface/type definitions cho data va fixtures
+- `storage-states/`: luu session login da duoc auth san
+- `snapshots/`: visual snapshots neu co visual testing
+- `tsconfig.json`: chuan hoa TypeScript compiler behavior
+- `eslint.config.js`: chuan hoa lint rules cho framework
+- `.env` va `.env.example`: quan ly bien moi truong an toan va de onboarding
+
+### 3.3 Danh gia structure hien tai so voi structure mo rong
+
+Repo hien tai da co nen tang tot:
+
+- `tests/`
+- `test-data/`
+- `test-flows/`
+- `modules/pages/`
+- `modules/components/`
+- `utils/`
+
+Nhung nhung phan sau hien chua co hoac chua duoc su dung lam layer rieng:
+
+- `fixtures/`
+- `types/`
+- `constants/`
+- `storage-states/`
+- `.env` va `.env.example`
+- `tsconfig.json`
+- `eslint`/`prettier` config
+
+Ket luan technical:
+
+- structure hien tai hop ly cho muc tieu hoc va phat trien framework theo Page Object + Component Object + Flow
+- structure hien tai chua du cho nhu cau scale team, scale env, scale data va CI/CD chat che
+- nen xem cac folder bo sung la buoc nang cap tiep theo, khong phai dieu kien bat buoc de framework hien tai hoat dong
+
+### 3.4 Cac file config dang co va nen co
+
+Cac file config dang co trong repo hien tai:
+
+- `package.json`
+- `playwright.config.js`
+- `playwright.config.ts`
+
+Cac file config nen co them neu muon chuan hoa hon:
+
+- `tsconfig.json`
+- `.env`
+- `.env.example`
+- `eslint.config.js` hoac `.eslintrc.*`
+- `.prettierrc`
+- `global.setup.ts`
+- `global.teardown.ts`
+
+Luu y voi project nay:
+
+- file dang phu hop voi source structure hien tai la `playwright.config.js` vi `testDir = './tests'`
+- `playwright.config.ts` hien dang tro toi `./e2e`, nen no thuoc nhom config cu hoac config demo
+- neu khong chuan hoa lai, nguoi maintain rat de chay nham config
+
+### 3.5 Script package.json nen map theo project hien tai
+
+Repo hien tai dang co scripts:
+
+```json
+{
+    "scripts": {
+        "test": "playwright test --headed",
+        "ui": "playwright test --ui"
+    }
+}
+```
+
+Van de la cac scripts nay chua chi ro file config dang dung.
+
+Neu refactor theo structure hien tai, scripts nen duoc map nhu sau:
+
+```json
+{
+    "scripts": {
+        "test": "playwright test --config=playwright.config.js",
+        "test:headed": "playwright test --config=playwright.config.js --headed",
+        "test:ui": "playwright test --config=playwright.config.js --ui",
+        "test:debug": "playwright test --config=playwright.config.js --debug",
+        "test:cheap-computer": "playwright test tests/computer/CheapComputerTest.spec.ts --config=playwright.config.js",
+        "test:standard-computer": "playwright test tests/computer/StandardComputerTest.spec.ts --config=playwright.config.js",
+        "report": "playwright show-report",
+        "lint": "eslint .",
+        "format": "prettier --write ."
+    }
+}
+```
+
+So voi project hien tai, uu tien cap nhat truoc la:
+
+- script chi ro config chinh
+- debug script
+- report script
+- lint/format scripts
 
 ### Moi quan he phu thuoc giua cac layer
 
