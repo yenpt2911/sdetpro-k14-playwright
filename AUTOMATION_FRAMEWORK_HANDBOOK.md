@@ -412,8 +412,6 @@ Nguyen tac can nho:
 - `modules/components/` la noi chua locator va low-level actions
 - `test-data/` la input, khong chua logic
 
-Đây là một Playwright framework theo layered automation architecture. Spec files giữ scenario orchestration. Flow classes giữ business journeys. Page objects là page-level composition roots. Component objects là UI interaction units. JSON files là externalized test inputs. Kiến trúc này tối ưu cho maintainability, reuse và scale theo domain, đặc biệt khi một page có nhiều section và một business flow đi qua nhiều screen.
-
 ### Quan he phu thuoc cu the trong CheapComputer flow
 
 Trong `CheapComputerTest.spec.ts`, dependency direction hien tai la:
@@ -696,7 +694,7 @@ Nhan xet:
 - chua tro thanh helper layer manh
 - chua co wrapper cho wait, assertions, logger, random data, api, storage state
 
-## 6. Luong thuc thi cua CheapComputerTest.spec.ts
+## 6. Luong thuc thi va cach thiet ke cua CheapComputerTest.spec.ts
 
 File goc:
 
@@ -732,11 +730,194 @@ flowchart TD
     K --> L[BillingAddressComponent / ShippingAddressComponent / ShippingMethodComponent]
 ```
 
+### 6.1 CheapComputerTest dang duoc thiet ke theo huong nao
+
+`CheapComputerTest.spec.ts` dang duoc thiet ke theo huong `thin spec, thick framework`.
+
+Nghia la:
+
+- spec file giu scenario orchestration
+- flow giu business journey
+- page giu page-level composition
+- component giu low-level UI interaction
+- JSON giu input data
+
+Neu nhin truc tiep vao file test, script chi lam 3 nhom viec chinh:
+
+1. mo trang can test
+2. khoi tao flow voi dung component va dung data
+3. goi cac buoc nghiep vu muc cao
+
+Dieu quan trong la spec file nay khong chua:
+
+- locator
+- XPath/CSS chi tiet
+- logic click radio/dropdown
+- logic doc price/quantity
+- logic checkout form chi tiet
+
+Day la dau hieu cua 1 E2E script duoc thiet ke dung huong, vi test dang mo ta y dinh kiem thu thay vi mo ta DOM implementation.
+
+### 6.2 E2E script nay dang phu thuoc vao nhung gi
+
+Script nay khong tu chay doc lap. No duoc ghep boi 5 lop phu thuoc ro rang:
+
+```text
+CheapComputerTest.spec.ts
+    -> OrderComputerFlow
+    -> CheapComputerData.json
+
+OrderComputerFlow
+    -> ComputerDetailsPage
+    -> ShoppingCartPage
+    -> CheckoutOptionsPage
+    -> CheckoutPage
+    -> DefaultCheckoutUser.json
+
+ComputerDetailsPage
+    -> CheapComputerComponent
+
+CheapComputerComponent
+    -> ComputerEssentialComponent
+
+ComputerEssentialComponent
+    -> BaseItemDetailsComponent
+    -> Playwright Locator API
+```
+
+Nhin theo technical dependency direction:
+
+- spec biet flow
+- flow biet page
+- page biet component
+- component biet Playwright locator API
+
+Huong di nay la dung, vi thay doi UI thuong chi lan toi `components`, thay doi page structure thuong chi lan toi `pages`, con thay doi nghiep vu thuong chi lan toi `flows` va `tests`.
+
+### 6.3 Vi sao cach thiet ke nay tot cho E2E
+
+#### Doc de hieu scenario
+
+Chi can doc `CheapComputerTest.spec.ts`, nguoi maintain co the hieu ngay luong nghiep vu:
+
+- mo cheap computer details page
+- build cau hinh
+- add to cart
+- verify shopping cart
+- checkout guest
+
+#### Reuse duoc flow
+
+Cung 1 flow `OrderComputerFlow` duoc dung lai cho:
+
+- `CheapComputerTest.spec.ts`
+- `StandardComputerTest.spec.ts`
+
+Khac biet duoc inject qua:
+
+- component class
+- JSON test data
+
+Day la dang dependency injection don gian nhung hieu qua.
+
+#### Tach data khoi script
+
+`CheapComputerData.json` va `DefaultCheckoutUser.json` giup script khong bi hard-code dau vao. Khi doi bo data, ban thuong khong phai sua logic test.
+
+#### Giam pham vi anh huong khi UI doi
+
+Neu locator doi, ban thuong sua o:
+
+- `CheapComputerComponent.ts`
+- `ComputerEssentialComponent.ts`
+- `BaseItemDetailsComponent.ts`
+
+thay vi sua truc tiep trong spec file.
+
+### 6.4 Diem can cai thien trong cach thiet ke hien tai
+
+Mau script nay dung huong, nhung chua den muc production-grade.
+
+#### Assertion con yeu
+
+Spec hien tai chu yeu goi flow methods, nhung chua co `expect(...)` ro rang o scenario level.
+
+Mot E2E test tot nen khang dinh duoc:
+
+- dang o dung page sau moi buoc lon
+- cart co dung item
+- quantity/subtotal hop le
+- checkout di den dung stage
+
+#### Flow dang qua to
+
+`OrderComputerFlow` hien dang om:
+
+- configure product
+- pricing logic
+- add to cart
+- cart verification
+- checkout guest
+- billing/shipping input
+
+Day la code smell ve responsibility. Ve lau dai nen tach nho thanh cac flow theo phase nghiep vu.
+
+#### Chua co `test.step()`
+
+Neu them `test.step()` cho tung business step, report se de doc va debug hon nhieu.
+
+#### Chua dung `baseURL`
+
+Spec dang `goto` bang full URL. Neu dua `baseURL` vao config, test se gon hon va de doi moi truong hon.
+
+### 6.5 Mau hinh E2E script senior-friendly hon nhung van giu convention hien tai
+
+```ts
+import { test, expect } from '@playwright/test';
+import OrderComputerFlow from '../../test-flows/computer/OrderComputerFlow';
+import CheapComputerComponent from '../../modules/components/computer/CheapComputerComponent';
+import testData from '../../test-data/computer/CheapComputerData.json';
+
+test('Guest can order cheap computer', async ({ page }) => {
+    await test.step('Open cheap computer details page', async () => {
+        await page.goto('https://demowebshop.tricentis.com/build-your-cheap-own-computer');
+    });
+
+    const computerFlow = new OrderComputerFlow(page, CheapComputerComponent, testData);
+
+    await test.step('Build computer configuration and add to cart', async () => {
+        await computerFlow.buildCompSpecAndAddToCart();
+    });
+
+    await test.step('Verify shopping cart', async () => {
+        await computerFlow.verifyShoppingCart();
+    });
+
+    await test.step('Checkout as guest', async () => {
+        await computerFlow.agreeTOSAndCheckout();
+        await computerFlow.inputBillingAddress();
+        await computerFlow.inputShippingAddress();
+        await computerFlow.selectShippingMethod();
+    });
+
+    await expect(page).toHaveURL(/checkout/);
+});
+```
+
+Mau nay van giu architecture hien tai cua project, nhung nang cap theo huong:
+
+- co step reporting ro rang
+- co scenario-level assertion
+- van giu thin spec
+- khong keo locator len test layer
+
 ## 7. Ky thuat xay dung test script dang ap dung
 
 ### 7.1 Thin spec
 
-Spec file chi orchestration.
+CheapComputerTest la vi du ro nhat cho thin spec design. Phan phan tich chi tiet da duoc mo rong tai muc 6.
+
+Tom tat, thin spec co nghia la spec file chi orchestration.
 
 Implement:
 
