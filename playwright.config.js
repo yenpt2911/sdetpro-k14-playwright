@@ -9,15 +9,17 @@ module.exports = defineConfig({
         },
     ],
     reporter: [
-        ['html'],
+        ['html', {open: 'never'}],
         ['allure-playwright'],
     ],
     retries: process.env.CI ? 2 : 1,
     use: {
+        baseURL: 'https://demowebshop.tricentis.com',
         actionTimeout: 5 * 1000,
         trace: 'on-first-retry',
         video: 'on-first-retry',
         screenshot: 'only-on-failure',
+        headless: false
     }
 
 })
