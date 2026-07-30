@@ -1,17 +1,18 @@
-import { Page, expect } from "@playwright/test"
+import { expect } from "@playwright/test"
 import defaultCheckoutUser from "../../test-data/DefaultCheckoutUser.json"
 import defaultCheckoutCard from "../../test-data/DefaultCheckoutCardData.json"
 import ComputerDetailsPage, { ComputerComponentConstructor } from "../../modules/pages/ComputerDetailsPage";
 import ComputerEssentialComponent from "../../modules/components/computer/ComputerEssentialComponent";
-import ShoppingCartPage from "../../modules/pages/ShoppingCartPage";
-import CheckoutOptionsPage from "../../modules/pages/CheckoutOptionsPage";
-import CheckoutPage from "../../modules/pages/CheckoutPage";
 import BillingAddressComponent from "../../modules/components/checkout/BillingAddressComponent";
 import ShippingAddressComponent from "../../modules/components/checkout/ShippingAddressComponent";
 import ShippingMethodComponent from "../../modules/components/checkout/ShippingMethodComponent";
 import PaymentMethodComponent from "../../modules/components/checkout/PaymentMethodComponent";
 import PAYMENT_METHOD from "../../constants/Payment";
 import PaymentInformationComponent from "../../modules/components/checkout/PaymentInformationComponent";
+import { test as pageObjectFixtures, PageObjectFixtures } from "../../fixtures/PageObjectTestFixture";
+import {test as globalTestAll} from "../../fixtures/GlobalBeforeAllFixture";
+import{ mergeTests} from "@playwright/test";
+
 
 /***
  * .locator: expect(locatorTYPE).method
@@ -19,38 +20,44 @@ import PaymentInformationComponent from "../../modules/components/checkout/Payme
  * .for Page: expect(pageTYPE).
 */
 
+export const test = mergeTests(pageObjectFixtures, globalTestAll).extend<{ orderComputerFlow: OrderComputerFlow }>({
+    orderComputerFlow: async ({ checkoutPage, checkoutOptionsPage, computerDetailsPage, shoppingCartPage }, use) => {
+        const orderComputerFlow = new OrderComputerFlow({ checkoutPage, checkoutOptionsPage, computerDetailsPage, shoppingCartPage });
+        await use(orderComputerFlow);
+    }
+});
+
+
 export default class OrderComputerFlow {
 
-    private totalPrice: number;
-    private productQuantity: number;
+    private totalPrice = 0;
+    private productQuantity = 0;
 
     constructor(
-        private readonly page: Page,
-        private readonly computerComponentClass: ComputerComponentConstructor<ComputerEssentialComponent>,
-        private readonly computerData: any
+        private readonly fixture: Pick<PageObjectFixtures, 'checkoutPage' | 'checkoutOptionsPage' | 'computerDetailsPage' | 'shoppingCartPage'>
     ) {
-        this.page = page;
-        this.computerComponentClass = computerComponentClass;
-        this.computerData = computerData;
     }
 
-    async buildCompSpecAndAddToCart(): Promise<void> {
+    async buildCompSpecAndAddToCart(
+        computerComponentClass: ComputerComponentConstructor<ComputerEssentialComponent>,
+        computerData: any
+    ): Promise<void> {
 
         // Build computer spec
-        const computerDetailPage: ComputerDetailsPage = new ComputerDetailsPage(this.page);
-        const computerComp = computerDetailPage.computerComp(this.computerComponentClass);
+        const computerDetailPage: ComputerDetailsPage = this.fixture.computerDetailsPage;
+        const computerComp = computerDetailPage.computerComp(computerComponentClass);
         await computerComp.unselectDefaultOptions();
-        const selectedProcessorText = await computerComp.selectProcessorType(this.computerData.processorType);
-        const selectedRAMText = await computerComp.selectRAMType(this.computerData.ram);
-        const selectedHDDText = await computerComp.selectHDDType(this.computerData.hdd);
-        const selectSoftwareText = await computerComp.selectSoftwareType(this.computerData.software);
+        const selectedProcessorText = await computerComp.selectProcessorType(computerData.processorType);
+        const selectedRAMText = await computerComp.selectRAMType(computerData.ram);
+        const selectedHDDText = await computerComp.selectHDDType(computerData.hdd);
+        const selectSoftwareText = await computerComp.selectSoftwareType(computerData.software);
         console.log(`Additional Price selectedProcessorText: ${this.extractAdditionalPrice(selectedProcessorText)}`);
         console.log(`Additional Price selectedRAMText: ${this.extractAdditionalPrice(selectedRAMText)}`);
         console.log(`Additional Price selectedHDDText: ${this.extractAdditionalPrice(selectedHDDText)}`);
 
         let additionalOsPrice = 0;
-        if (this.computerData.os) {
-            const selectedOSText = await computerComp.selectOSType(this.computerData.os);
+        if (computerData.os) {
+            const selectedOSText = await computerComp.selectOSType(computerData.os);
             additionalOsPrice = this.extractAdditionalPrice(selectedOSText);
         }
         // Calculate current product's price
@@ -80,7 +87,7 @@ export default class OrderComputerFlow {
     }
 
     public async verifyShoppingCart(): Promise<void> {
-        const shoppingCartPage: ShoppingCartPage = new ShoppingCartPage(this.page);
+        const shoppingCartPage = this.fixture.shoppingCartPage;
         const cartItemRowComponentList = await shoppingCartPage.cartItemRowComponentList();
         const totalComponent = shoppingCartPage.totalComponent();
         for (let cartItemRowComponent of cartItemRowComponentList) {
@@ -100,19 +107,18 @@ export default class OrderComputerFlow {
     }
 
     public async agreeTOSAndCheckout(): Promise<void> {
-        const shoppingCartPage: ShoppingCartPage = new ShoppingCartPage(this.page);
+        const shoppingCartPage = this.fixture.shoppingCartPage;
         await shoppingCartPage.totalComponent().acceptTOS();
         await shoppingCartPage.totalComponent().clickOnCheckoutBtn();
 
         // Exceptional case that the flow step is handling 2 pages
-        const checkoutOptionsPage: CheckoutOptionsPage = new CheckoutOptionsPage(this.page);
+        const checkoutOptionsPage = this.fixture.checkoutOptionsPage;
         await checkoutOptionsPage.checkoutAsGuest();
-        await this.page.waitForTimeout(3 * 1000);
     }
 
     public async inputBillingAddress(): Promise<void> {
         const { firstName, lastName, email, country, state, city, add1, zipCode, phoneNum } = defaultCheckoutUser;
-        const checkoutPage: CheckoutPage = new CheckoutPage(this.page);
+        const checkoutPage = this.fixture.checkoutPage;
         const billingAddressComponent: BillingAddressComponent = checkoutPage.billingAddressComponent();
         await billingAddressComponent.selectInputNewAddress();
         await billingAddressComponent.inputFirstname(firstName);
@@ -125,12 +131,10 @@ export default class OrderComputerFlow {
         await billingAddressComponent.inputZipCode(zipCode);
         await billingAddressComponent.inputPhonenumber(phoneNum);
         await billingAddressComponent.clickOnContinueButton();
-
-        await this.page.waitForTimeout(3 * 1000);
     }
 
     public async inputShippingAddress(): Promise<void> {
-        const checkoutPage: CheckoutPage = new CheckoutPage(this.page);
+        const checkoutPage = this.fixture.checkoutPage;
         const shippingAddressComponent: ShippingAddressComponent = checkoutPage.shippingAddressComponent();
         await shippingAddressComponent.clickOnContinueButton();
     }
@@ -143,7 +147,7 @@ export default class OrderComputerFlow {
         * console.log(randomIndex)
         * console.log(myArray[randomIndex])
         */
-        const checkoutPage: CheckoutPage = new CheckoutPage(this.page);
+        const checkoutPage = this.fixture.checkoutPage;
         const shippingMethodComponent: ShippingMethodComponent = checkoutPage.shippingMethodComponent();
 
         await shippingMethodComponent.clickOnContinueButton();
@@ -151,7 +155,7 @@ export default class OrderComputerFlow {
     }
 
     public async selectPaymentMethod(paymentMethod: string): Promise<void> {
-        const checkoutPage: CheckoutPage = new CheckoutPage(this.page);
+        const checkoutPage = this.fixture.checkoutPage;
         const paymentMethodComponent: PaymentMethodComponent = checkoutPage.paymentMethodComponent();
         switch (paymentMethod) {
             case PAYMENT_METHOD.cod:
@@ -172,7 +176,7 @@ export default class OrderComputerFlow {
 
 
     public async inputPaymentInformation(creditCardType: string) {
-        const checkoutPage: CheckoutPage = new CheckoutPage(this.page);
+        const checkoutPage = this.fixture.checkoutPage;
         const paymentInformationComponent: PaymentInformationComponent = checkoutPage.paymentInformationComponent();
         const { firstName, lastName } = defaultCheckoutUser;
         const { expirationMonth, expirationYear, cardNumber, cardCode } = defaultCheckoutCard;
@@ -186,7 +190,7 @@ export default class OrderComputerFlow {
     }
 
     public async confirmOrder() {
-        await new CheckoutPage(this.page).confirmOrderComponent().clickOnConfirmButton();
+        await this.fixture.checkoutPage.confirmOrderComponent().clickOnConfirmButton();
     }
 
     private extractAdditionalPrice(fullText: string): number {
