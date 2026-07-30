@@ -29,9 +29,10 @@ export const test = pageObjectFixture.extend<PageObjectFixtures>({
         await use(checkoutOptionsPage);
     },
 
+    // No navigation here: Cheap/Standard/Generic computer tests each need a
+    // different (or no) starting URL, so callers goto explicitly in the test body.
     computerDetailsPage: async({page}, use) => {
-        await page.goto('https://demowebshop.tricentis.com/build-your-cheap-own-computer');
-        const computerDetailsPage = new ComputerDetailsPage(page); 
+        const computerDetailsPage = new ComputerDetailsPage(page);
         await use(computerDetailsPage);
     },
 

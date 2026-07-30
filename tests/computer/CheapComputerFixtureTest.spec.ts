@@ -4,9 +4,11 @@ import CheapComputerComponent from '../../modules/components/computer/CheapCompu
 import testData from '../../test-data/computer/CheapComputerData.json';
 import PAYMENT_METHOD from '../../constants/Payment';
 import CREDIT_CARD_TYPE from '../../constants/CreditCardType';
+import ROUTES from '../../constants/Routes';
 
 testData.forEach(computerData => {
-    test(`Test Cheap computer component | RAM: ${computerData.ram}`, async ({ orderComputerFlow }) => {
+    test(`Test Cheap computer component | RAM: ${computerData.ram}`, async ({ page, orderComputerFlow }) => {
+        await page.goto(ROUTES.buildCheapComputer);
         await orderComputerFlow.buildCompSpecAndAddToCart(CheapComputerComponent, computerData);
         await orderComputerFlow.verifyShoppingCart();
         await orderComputerFlow.agreeTOSAndCheckout();
