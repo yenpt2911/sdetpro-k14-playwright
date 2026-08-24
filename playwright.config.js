@@ -1,4 +1,5 @@
 const { defineConfig, devices } = require('@playwright/test');
+require('dotenv').config({ path: `.env.${process.env.ENV || 'qa'}` });
 
 module.exports = defineConfig({
     testDir: './tests',
@@ -14,12 +15,12 @@ module.exports = defineConfig({
     ],
     retries: process.env.CI ? 2 : 1,
     use: {
-        baseURL: 'https://demowebshop.tricentis.com',
+        baseURL: process.env.BASE_URL || 'https://demowebshop.tricentis.com',
         actionTimeout: 5 * 1000,
         trace: 'on-first-retry',
         video: 'on-first-retry',
         screenshot: 'only-on-failure',
-        headless: false
+        headless: process.env.HEADLESS === 'true'
     }
 
 })

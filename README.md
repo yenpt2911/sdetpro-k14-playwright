@@ -1,431 +1,858 @@
-# Playwright E2E Testing Guide
+# SDETPRO K14 Playwright Automation Framework
 
-## 1. Muc tieu cua project
+A comprehensive end-to-end test automation framework built with Playwright and TypeScript, demonstrating advanced design patterns including Page Object Model, Component Object Pattern, Flow Pattern, and Fixture-based Dependency Injection.
 
-Project nay dung Playwright de viet E2E test theo mo hinh tach lop ro rang:
+---
 
-- `tests/`: noi chua test case
-- `test-data/`: du lieu dau vao cho tung kịch bản test
-- `test-flows/`: business flow gom nhieu buoc lon
-- `modules/pages/`: page object dai dien cho tung trang
-- `modules/components/`: component object dai dien cho tung khu vuc hoac widget tren trang
-- `utils/`: helper dung chung
+## Table of Contents
 
-Muc tieu cua cach to chuc nay la giup test:
+1. [Project Overview](#1-project-overview)
+2. [Project Structure](#2-project-structure)
+3. [Project Setup](#3-project-setup)
+4. [Configuration](#4-configuration)
+5. [Framework Design](#5-framework-design)
+6. [Test Design Guidelines](#6-test-design-guidelines)
+7. [Environment Configuration](#7-environment-configuration)
+8. [Recommendations](#8-recommendations)
 
-- de doc
-- de tai su dung
-- de mo rong khi them san pham hoac flow moi
-- giam duplicate code UI actions
+---
 
-## 2. Cau truc hien tai
+## 1. Project Overview
 
-```text
-.
-|-- modules/
-|   |-- components/
-|   |   |-- BaseItemDetailsComponent.ts
-|   |   |-- SelectorDecorator.ts
-|   |   `-- computer/
-|   |       |-- ComputerEssentialComponent.ts
-|   |       |-- CheapComputerComponent.ts
-|   |       `-- StandardComputerComponent.ts
-|   `-- pages/
-|       |-- ComputerDetailsPage.ts
-|       |-- ShoppingCartPage.ts
-|       |-- CheckoutOptionsPage.ts
-|       `-- CheckoutPage.ts
-|-- test-data/
-|   `-- computer/
-|       |-- CheapComputerData.json
-|       `-- StandardComputerData.json
-|-- test-flows/
-|   `-- computer/
-|       `-- OrderComputerFlow.ts
-|-- tests/
-|   `-- computer/
-|       |-- CheapComputerTest.spec.ts
-|       `-- StandardComputerTest.spec.ts
-|-- playwright.config.js
-`-- package.json
+### Purpose
+
+This framework automates end-to-end testing for the [Demo Web Shop](https://demowebshop.tricentis.com) e-commerce application. It demonstrates professional test automation architecture patterns suitable for enterprise-level projects.
+
+### Technology Stack
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Playwright | 1.42.1 | Browser automation engine |
+| TypeScript | via `tsconfig.json` | Type-safe test development |
+| Node.js | 18+ recommended | Runtime environment |
+| Allure | 3.0.0-beta.3 | Test reporting |
+| dotenv | ^16.x | Loads `.env.*` files for multi-environment config |
+| cross-env | ^7.x | Cross-platform env variable setting for npm scripts |
+
+### Project Hierarchy
+
+The framework is organized as a strict top-down hierarchy — each layer only talks to the layer directly below it:
+
+```mermaid
+graph TD
+    Test["Test Spec (*.spec.ts)"]
+    Fixture["Fixtures (mergeTests / DI)"]
+    Flow["Test Flow (business workflow)"]
+    Page["Page Object"]
+    Component["Component"]
+    Playwright["Playwright API"]
+    Data["Test Data (JSON/.ts) + Constants"]
+
+    Test --> Fixture
+    Fixture --> Flow
+    Flow --> Page
+    Page --> Component
+    Component --> Playwright
+    Test --> Data
+
+    Fixture --> PageObjectTestFixture
+    PageObjectTestFixture["PageObjectTestFixture"] --> Page
+
+    Flow --> OrderComputerFlow["OrderComputerFlow"]
+
+    Page --> ComputerDetailsPage
+    Page --> CheckoutPage
+    Page --> ShoppingCartPage
+    Page --> HomePage
+
+    Component --> ComputerEssentialComponent
+    Component --> BillingAddressComponent
+    Component --> HeaderComponent
+    Component --> TotalComponent
 ```
 
-## 3. Mo hinh thiet ke chinh
+### Execution Flow
 
-### 3.1 Luong chay test
-
-```text
-spec file
--> test-data
--> flow
--> page
--> component
--> Playwright locator/action
+```mermaid
+sequenceDiagram
+    participant Test as Test Spec
+    participant Fixture as Fixtures
+    participant Flow as Test Flow
+    participant Page as Page Object
+    participant Component as Component
+    participant Playwright as Playwright API
+    
+    Test->>Fixture: Request fixtures (page, orderComputerFlow)
+    Fixture->>Fixture: Initialize Page Objects
+    Fixture->>Flow: Inject dependencies
+    Test->>Flow: Call business method
+    Flow->>Page: Get component
+    Page->>Component: Create component instance
+    Component->>Playwright: Execute actions
+    Playwright-->>Component: Return result
+    Component-->>Flow: Return data
+    Flow->>Test: Assert expectations
 ```
 
-Vi du voi cheap computer:
+### Why This Architecture?
 
-- `tests/computer/CheapComputerTest.spec.ts`
-- `test-data/computer/CheapComputerData.json`
-- `test-flows/computer/OrderComputerFlow.ts`
-- `modules/pages/ComputerDetailsPage.ts`
-- `modules/components/computer/CheapComputerComponent.ts`
-- `modules/components/computer/ComputerEssentialComponent.ts`
-- `modules/components/BaseItemDetailsComponent.ts`
+| Pattern | Benefit |
+|---------|---------|
+| **Layered Architecture** | Separation of concerns - each layer has single responsibility |
+| **Fixtures for DI** | Clean dependency injection, automatic cleanup, reusable setup |
+| **Flow Pattern** | Encapsulates multi-step business workflows, reusable across tests |
+| **Component Pattern** | Reusable UI element interactions across multiple pages |
+| **Data-Driven** | Same test logic, multiple data sets via JSON |
 
-### 3.2 Vai tro tung lop
+---
 
-#### `spec`
-Chi mo ta test scenario o muc cao:
+## 2. Project Structure
 
-- vao trang nao
-- dung flow nao
-- truyen component nao
-- truyen du lieu nao
-- verify den dau
-
-#### `test-data`
-Chua du lieu cau hinh cho test, vi du:
-
-- processor
-- RAM
-- HDD
-- software
-- OS
-- thong tin checkout
-
-#### `flow`
-Dong goi business flow lon, vi du:
-
-- build cau hinh may tinh
-- add to cart
-- verify shopping cart
-- checkout guest
-- input billing
-- input shipping
-
-#### `page`
-Dai dien cho mot page va la noi tap hop cac component thuoc page do.
-
-Vi du `ComputerDetailsPage` tra ve:
-
-- computer component
-- header component
-- bar notification text
-
-#### `component`
-Dong goi thao tac tren mot khu vuc cu the cua UI.
-
-Vi du:
-
-- `BaseItemDetailsComponent`: gia, so luong, add to cart, bo chon default options
-- `ComputerEssentialComponent`: hanh vi chung cho computer details
-- `CheapComputerComponent`: cach chon option cua cheap computer
-- `StandardComputerComponent`: cach chon option cua standard computer
-
-## 4. File cau hinh dang duoc su dung
-
-Repo dang co 2 file config:
-
-- `playwright.config.ts`: `testDir = './e2e'`
-- `playwright.config.js`: `testDir = './tests'`
-
-Voi source code hien tai, cac test chinh dang nam trong `tests/`, vi vay file config phu hop voi framework nay la `playwright.config.js`.
-
-Neu chay `npm test`, script hien tai goi `playwright test --headed`, Playwright se uu tien file config mac dinh trong root. Hay giu y dieu nay neu ban thay ket qua chay khong dung thu muc mong muon.
-
-## 5. Cach chay test
-
-### Cai dependencies
-
-```bash
-npm install
-npx playwright install
+```
+sdetpro-k14-playwright/
+├── constants/           # Application constants (enums, routes, config values)
+│   └── Routes.ts        # Relative route paths used with page.goto()
+├── e2e/                 # Reserved for e2e tests (currently empty)
+├── fixtures/            # Playwright custom fixtures
+├── modules/             # Page Objects and Components
+│   ├── components/      # Reusable UI components
+│   │   ├── cart/        # Shopping cart components
+│   │   ├── checkout/    # Checkout process components
+│   │   ├── computer/    # Computer product components
+│   │   └── global/      # Header, Footer components
+│   └── pages/           # Page Object classes
+├── test-data/           # Test data JSON/TS files
+│   ├── DefaultCheckoutUser.ts    # Wraps JSON data, allows env override (TEST_USER_EMAIL)
+│   └── computer/        # Computer-specific test data
+├── test-flows/          # Business workflow classes
+│   ├── computer/        # Computer ordering flows
+│   └── global/          # Global/shared flows
+├── tests/               # Test specifications
+│   ├── computer/        # Computer product tests
+│   ├── fixture-tests/   # Fixture demonstration tests
+│   └── global/          # Global component tests
+├── utils/               # Utility functions
+├── .env.example         # Environment variable template (tracked)
+├── .env.dev / .env.qa / .env.prod  # Per-environment config (gitignored)
+├── playwright.config.js # Playwright configuration
+├── tsconfig.json        # TypeScript compiler configuration
+└── package.json         # Project dependencies
 ```
 
-### Chay toan bo test trong `tests/`
+### Folder Details
 
-```bash
-npx playwright test --config=playwright.config.js
+#### `constants/`
+**Purpose:** Store application-wide constants that don't change between environments.
+
+| File | Purpose |
+|------|---------|
+| `Payment.ts` | Payment method identifiers (COD, Credit Card, etc.) |
+| `CreditCardType.ts` | Credit card type values (Visa, MasterCard, etc.) |
+| `Routes.ts` | Relative route paths (e.g. `buildCheapComputer`, `buildStandardComputer`) used with `page.goto()`, combined with `baseURL` per environment |
+
+**What belongs here:**
+- Payment methods, card types, shipping methods
+- UI text constants for validation
+- Dropdown option values
+- Relative route paths (see `Routes.ts`)
+
+**What does NOT belong here:**
+- Absolute/environment-specific URLs (use `baseURL` + `Routes.ts`)
+- Test data (use `test-data/`)
+- Credentials (use environment variables)
+
+#### `fixtures/`
+**Purpose:** Playwright fixtures for dependency injection and test setup.
+
+| File | Purpose |
+|------|---------|
+| `PageObjectTestFixture.ts` | Provides Page Object instances to tests |
+| `GlobalBeforeAllFixture.ts` | Worker-scoped setup (runs once per worker) |
+| `GlobalBeforeEachFixture.ts` | Test-scoped auto-setup |
+| `SimpleTestFixture.ts` | Learning/demo fixture |
+| `LoginBeforeTestFixture.ts` | Login setup fixture |
+
+**Key Architecture Decision:** Fixtures do NOT navigate to URLs. Navigation is explicit in test body because different tests need different starting URLs.
+
+```typescript
+// PageObjectTestFixture.ts - NO navigation inside fixture
+computerDetailsPage: async({page}, use) => {
+    const computerDetailsPage = new ComputerDetailsPage(page);
+    await use(computerDetailsPage);
+},
 ```
 
-### Chay test co giao dien headed
+#### `modules/components/`
+**Purpose:** Reusable UI component classes representing distinct sections of pages.
 
-```bash
-npx playwright test --config=playwright.config.js --headed
+**Component Hierarchy:**
+```mermaid
+classDiagram
+    class BaseItemDetailsComponent {
+        +unselectDefaultOptions()
+        +getProductPrice()
+        +clickOnAddToCartBtn()
+    }
+    
+    class ComputerEssentialComponent {
+        <<abstract>>
+        +selectProcessorType()*
+        +selectRAMType()*
+        +selectHDDType()
+        +selectOSType()
+    }
+    
+    class CheapComputerComponent {
+        +selectProcessorType()
+        +selectRAMType()
+    }
+    
+    class StandardComputerComponent {
+        +selectProcessorType()
+        +selectRAMType()
+        +selectOSType()
+    }
+    
+    BaseItemDetailsComponent <|-- ComputerEssentialComponent
+    ComputerEssentialComponent <|-- CheapComputerComponent
+    ComputerEssentialComponent <|-- StandardComputerComponent
 ```
 
-### Chay 1 file test
-
-```bash
-npx playwright test tests/computer/CheapComputerTest.spec.ts --config=playwright.config.js
-```
-
-### Chay UI mode
-
-```bash
-npm run ui
-```
-
-Neu muon UI mode dung dung thu muc `tests/`, nen chay:
-
-```bash
-npx playwright test --config=playwright.config.js --ui
-```
-
-## 6. Cach tao mot E2E test moi theo source code nay
-
-Duoi day la quy trinh khuyen nghi khi them mot test moi.
-
-### Buoc 1. Tao test data
-
-Them file JSON trong `test-data/` theo domain phu hop.
-
-Vi du tao file:
-
-`test-data/computer/MyComputerData.json`
-
-```json
-{
-  "processorType": "2.2 GHz",
-  "ram": "8GB",
-  "hdd": "400 GB",
-  "software": "Image Viewer"
-}
-```
-
-Neu flow can them du lieu khac, ban them field moi trong JSON va doc field do o flow/component.
-
-### Buoc 2. Tao hoac tai su dung component
-
-Neu trang san pham moi co logic chon option giong component da co, co the tai su dung.
-
-Neu can them component moi, tao file trong `modules/components/<domain>/`.
-
-Vi du:
-
-```ts
-import { Locator } from "@playwright/test";
-import ComputerEssentialComponent from "./ComputerEssentialComponent";
-import { selector } from "../SelectorDecorator";
-
+**Selector Decorator Pattern:**
+```typescript
+// Components use @selector decorator to define their root locator
 @selector(".product-essential")
-export default class MyComputerComponent extends ComputerEssentialComponent {
-    constructor(component: Locator) {
-        super(component);
-    }
-
-    async selectProcessorType(type: string): Promise<string> {
-        return await this.selectCompOption(type);
-    }
-
-    async selectRAMType(type: string): Promise<string> {
-        return await this.selectCompOption(type);
-    }
+export default class CheapComputerComponent extends ComputerEssentialComponent {
+    // ...
 }
 ```
 
-Khi nao can component moi?
+#### `modules/pages/`
+**Purpose:** Page Object classes representing full application pages.
 
-- HTML/locator khac component cu
-- cach chon option khac, vi du dropdown thay vi radio/checkbox
-- can them hanh vi rieng cho mot loai san pham
+| Page | Responsibility |
+|------|----------------|
+| `HomePage.ts` | Main landing page, provides header/footer/body components |
+| `ComputerDetailsPage.ts` | Product details, uses generic factory for computer components |
+| `CheckoutPage.ts` | Checkout process, provides all checkout step components |
+| `ShoppingCartPage.ts` | Cart management, provides cart item and total components |
+| `CheckoutOptionsPage.ts` | Guest/login checkout selection |
 
-### Buoc 3. Tai su dung hoac cap nhat page object
-
-`ComputerDetailsPage` dang co generic method:
-
-```ts
+**Generic Component Factory:**
+```typescript
+// ComputerDetailsPage uses TypeScript generics for flexible component creation
 computerComp<Tun extends ComputerEssentialComponent>(
     computerComponentClass: ComputerComponentConstructor<Tun>
-): Tun
+): Tun {
+    return new computerComponentClass(this.page.locator(computerComponentClass.selectorValue));
+}
 ```
 
-Muc dich cua method nay la nhan vao class component va tra ve dung instance component do.
+#### `test-flows/`
+**Purpose:** Encapsulate multi-step business workflows that span multiple pages/components.
 
-Neu page moi la page khac hoan toan, tao page object moi trong `modules/pages/`.
+**OrderComputerFlow Methods:**
+```mermaid
+graph LR
+    A[buildCompSpecAndAddToCart] --> B[verifyShoppingCart]
+    B --> C[agreeTOSAndCheckout]
+    C --> D[inputBillingAddress]
+    D --> E[inputShippingAddress]
+    E --> F[selectShippingMethod]
+    F --> G[selectPaymentMethod]
+    G --> H[inputPaymentInformation]
+    H --> I[confirmOrder]
+```
 
-### Buoc 4. Tai su dung hoac viet flow
+**Key Design:** Flow receives Page Objects via fixture injection, not `page` directly:
+```typescript
+constructor(
+    private readonly fixture: Pick<PageObjectFixtures, 
+        'checkoutPage' | 'checkoutOptionsPage' | 'computerDetailsPage' | 'shoppingCartPage'>
+) {}
+```
 
-Neu business flow giong nhau, tiep tuc dung `OrderComputerFlow`.
+#### `test-data/`
+**Purpose:** JSON files containing test data for data-driven tests.
 
-Flow nay hien tai da gom:
+| File | Structure |
+|------|-----------|
+| `CheapComputerData.json` | Array of computer configurations (processor, RAM, HDD, software) |
+| `StandardComputerData.json` | Standard computer configurations with OS options |
+| `DefaultCheckoutUser.json` | Raw default user information for checkout |
+| `DefaultCheckoutUser.ts` | Wraps `DefaultCheckoutUser.json`, overriding `email` with `process.env.TEST_USER_EMAIL` when set. **Import this file (not the raw JSON) in flows/tests.** |
+| `DefaultCheckoutCardData.json` | Default credit card information |
 
-- build spec
-- add to cart
-- verify shopping cart
-- agree TOS
-- checkout guest
-- input billing address
-- input shipping address
-- select shipping method
+#### `tests/`
+**Purpose:** Test specification files organized by feature.
 
-Neu luong nghiep vu khac, tao flow moi trong `test-flows/`.
+**Naming Convention:** `{Feature}{Type}Test.spec.ts`
+- `CheapComputerTest.spec.ts` - Main cheap computer test
+- `CheapComputerFixtureTest.spec.ts` - Fixture-based variant
+- `GenericComponentTest.spec.ts` - Generic type system demonstration
 
-Nen dat flow o muc business thay vi viet thang vao spec file de:
+---
 
-- spec ngan gon
-- de tai su dung nhieu lan
-- de bao tri
+## 3. Project Setup
 
-### Buoc 5. Tao file spec
+### Prerequisites
 
-Them file vao `tests/` theo domain.
+| Requirement | Version | Purpose |
+|-------------|---------|---------|
+| Node.js | 18.x or higher | JavaScript runtime |
+| npm | 9.x or higher | Package manager |
+| Git | Any recent | Version control |
+| VS Code | Latest | Recommended IDE |
 
-Vi du:
+### VS Code Extensions (Recommended)
 
-```ts
-import { test } from '@playwright/test';
-import OrderComputerFlow from '../../test-flows/computer/OrderComputerFlow';
-import MyComputerComponent from '../../modules/components/computer/MyComputerComponent';
-import testData from '../../test-data/computer/MyComputerData.json';
+- **Playwright Test for VSCode** - Test running and debugging
+- **ESLint** - Code linting
+- **Prettier** - Code formatting
+- **TypeScript** - Language support
 
-test('Test my computer component', async ({ page }) => {
-    await page.goto('https://demowebshop.tricentis.com/build-your-own-computer');
+### Installation Steps
 
-    const computerFlow = new OrderComputerFlow(page, MyComputerComponent, testData);
+```bash
+# 1. Clone the repository
+git clone <repository-url>
+cd sdetpro-k14-playwright
 
-    await computerFlow.buildCompSpecAndAddToCart();
-    await computerFlow.verifyShoppingCart();
-    await computerFlow.agreeTOSAndCheckout();
-    await computerFlow.inputBillingAddress();
-    await computerFlow.inputShippingAddress();
-    await computerFlow.selectShippingMethod();
+# 2. Install dependencies
+npm install
+
+# 3. Install Playwright browsers
+npx playwright install chromium
+
+# 4. Verify installation
+npx playwright test --list
+```
+
+### Running Tests
+
+| Command | Purpose |
+|---------|---------|
+| `npm test` | Run all tests (headed mode) |
+| `npm run ui` | Open Playwright UI mode |
+| `npx playwright test` | Run all tests |
+| `npx playwright test computer/` | Run computer folder tests only |
+| `npx playwright test CheapComputerTest` | Run specific test file |
+| `npx playwright test --headed` | Run with browser visible |
+| `npx playwright test --debug` | Debug mode with inspector |
+| `npx playwright test --ui` | Interactive UI mode |
+| `npx playwright test --project=chromium` | Run on specific browser |
+
+### Generating Reports
+
+```bash
+# HTML Report (generated automatically after test run)
+npx playwright show-report
+
+# Allure Report
+npx allure generate allure-results --clean
+npx allure open
+```
+
+---
+
+## 4. Configuration
+
+### playwright.config.js
+
+```javascript
+const { defineConfig, devices } = require('@playwright/test');
+require('dotenv').config({ path: `.env.${process.env.ENV || 'qa'}` }); // Loads .env.<ENV> (default: qa)
+
+module.exports = defineConfig({
+    testDir: './tests',                    // Root directory for test files
+    projects: [
+        {
+            name: 'chromium',
+            use: { ...devices['Desktop Chrome'] },
+        },
+    ],
+    reporter: [
+        ['html', {open: 'never'}],         // HTML report, don't auto-open
+        ['allure-playwright'],              // Allure integration
+    ],
+    retries: process.env.CI ? 2 : 1,       // More retries in CI
+    use: {
+        baseURL: process.env.BASE_URL || 'https://demowebshop.tricentis.com',  // Base URL for page.goto, driven by .env.*
+        actionTimeout: 5 * 1000,           // Timeout for actions (5 seconds)
+        trace: 'on-first-retry',           // Capture trace on retry
+        video: 'on-first-retry',           // Record video on retry
+        screenshot: 'only-on-failure',     // Screenshot on failure
+        headless: process.env.HEADLESS === 'true'  // Driven by .env.* (true in CI/prod)
+    }
 });
 ```
 
-## 7. Cach quyet dinh tao file o dau
+### Configuration Properties Explained
 
-### Tao trong `tests/` khi:
+| Property | Current Value | Purpose | When to Modify |
+|----------|---------------|---------|----------------|
+| `testDir` | `'./tests'` | Where Playwright looks for test files | If restructuring test locations |
+| `projects` | `['chromium']` | Browser configurations to run | Add Firefox/WebKit for cross-browser |
+| `retries` | `1 (local), 2 (CI)` | Auto-retry failed tests | Increase for flaky environments |
+| `baseURL` | `process.env.BASE_URL` (per `.env.*`) | Prepended to relative URLs | Edit `.env.dev` / `.env.qa` / `.env.prod` (see Section 7) |
+| `actionTimeout` | `5000ms` | Max wait for actions | Increase for slow networks |
+| `headless` | `process.env.HEADLESS === 'true'` | Run without UI | Set `HEADLESS=true` in `.env.prod`/CI |
+| `trace` | `'on-first-retry'` | Record detailed trace | Set `'on'` for debugging |
+| `video` | `'on-first-retry'` | Record test video | Useful for debugging |
+| `screenshot` | `'only-on-failure'` | Capture screenshots | Change to `'on'` if needed |
 
-- ban dang mo ta mot scenario hoan chinh
-- ban chi can noi cac buoc lon lai voi nhau
+### Adding Multi-Browser Support
 
-### Tao trong `test-flows/` khi:
-
-- nhieu test dung cung mot luong nghiep vu
-- can gop nhieu page/component actions thanh business step
-
-### Tao trong `modules/pages/` khi:
-
-- can dai dien cho mot page moi
-- can tra ve component tren page do
-- can boc tach locator/page-level actions
-
-### Tao trong `modules/components/` khi:
-
-- can thao tac voi 1 khu vuc UI cu the
-- can tai su dung locators va actions cua mot widget
-- page qua lon nen can tach nho
-
-### Tao trong `test-data/` khi:
-
-- ban muon tach du lieu khoi test logic
-- can chay nhieu bo data cho cung 1 flow
-
-## 8. Convention dang duoc ap dung trong repo
-
-### 8.1 Dat ten file
-
-- test file: `SomethingTest.spec.ts`
-- flow file: `SomethingFlow.ts`
-- page file: `SomethingPage.ts`
-- component file: `SomethingComponent.ts`
-- data file: `SomethingData.json`
-
-### 8.2 Test nen mong va ro y nghia
-
-Spec file nen ngan gon, uu tien:
-
-- `goto`
-- khoi tao flow
-- goi cac buoc muc cao
-- tranh viet locator truc tiep trong spec
-
-### 8.3 Dung data-driven
-
-Khong hard-code gia tri chon option trong component neu no thuoc ve test scenario. Dua du lieu vao JSON va truyen vao flow.
-
-### 8.4 Tai su dung base class
-
-- `BaseItemDetailsComponent` cho hanh vi chung cua trang chi tiet san pham
-- `ComputerEssentialComponent` cho hanh vi chung cua computer
-- component cu the chi override phan khac nhau
-
-## 9. Vi du workflow tao test moi
-
-Vi du ban muon test `Standard computer`:
-
-1. Tao data trong `test-data/computer/StandardComputerData.json`
-2. Dung `StandardComputerComponent` de xu ly dropdown
-3. Dung `OrderComputerFlow` de build spec va checkout
-4. Tao `tests/computer/StandardComputerTest.spec.ts`
-5. Chay:
-
-```bash
-npx playwright test tests/computer/StandardComputerTest.spec.ts --config=playwright.config.js
+```javascript
+projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    { name: 'mobile', use: { ...devices['Pixel 5'] } },
+],
 ```
 
-## 10. Luu y ky thuat tu source hien tai
+---
 
-### 10.1 Co 2 kieu chon option
+## 5. Framework Design
 
-- `CheapComputerComponent`: chon bang text label va click
-- `StandardComputerComponent`: chon bang dropdown option
+### Design Patterns Used
 
-Dieu nay cho thay component la noi dung de xu ly khac biet ve UI implementation.
+#### 1. Page Object Model (POM)
 
-### 10.2 Flow dang chiu trach nhiem tinh gia va checkout
+**What:** Classes that represent application pages, encapsulating page structure and interactions.
 
-`OrderComputerFlow` hien tai khong chi add to cart ma con:
+**Why:** 
+- Single point of maintenance for page changes
+- Readable test code
+- Reusable page interactions
 
-- tinh tong gia theo option da chon
-- verify shopping cart
-- chay tiep checkout guest
+**Implementation:**
+```typescript
+// modules/pages/CheckoutPage.ts
+export default class CheckoutPage {
+    constructor(private page: Page) {}
+    
+    public billingAddressComponent(): BillingAddressComponent {
+        return new BillingAddressComponent(
+            this.page.locator(BillingAddressComponent.selectorValue)
+        );
+    }
+}
+```
 
-Neu sau nay flow qua dai, nen tach nho them theo module, vi du:
+#### 2. Component Object Pattern
 
-- `BuildComputerFlow`
-- `CartFlow`
-- `CheckoutFlow`
+**What:** Reusable classes representing UI components that appear across multiple pages.
 
-### 10.3 Can thong nhat config Playwright
+**Why:**
+- Avoid duplication for shared UI elements (header, footer)
+- Encapsulate complex component logic
+- Support composition in Page Objects
 
-Do repo dang co ca `playwright.config.ts` va `playwright.config.js`, nen de tranh nham lan ban nen:
+**Implementation:**
+```typescript
+// modules/components/global/header/HeaderComponent.ts
+export default class HeaderComponent {
+    public static selector: string = ".header";
+    
+    constructor(private component: Locator) {}
+    
+    public async clickOnShoppingCartLink(): Promise<void> {
+        await this.component.locator(this.shoppingCartLink).click();
+    }
+}
+```
 
-- giu 1 file config chinh
-- hoac luon chay command kem `--config=playwright.config.js`
+#### 3. Flow Pattern
 
-## 11. Checklist khi them E2E test moi
+**What:** Classes that orchestrate multi-step business workflows spanning multiple pages.
 
-- [ ] Xac dinh page can test
-- [ ] Xac dinh co can page object moi khong
-- [ ] Xac dinh co can component moi khong
-- [ ] Tao file data JSON
-- [ ] Tao hoac tai su dung flow
-- [ ] Tao file spec
-- [ ] Chay rieng file spec vua tao
-- [ ] Kiem tra HTML report
+**Why:**
+- Tests remain focused on "what" not "how"
+- Reusable complex workflows
+- Business logic separated from UI interactions
 
-## 12. Lenh mau thuong dung
+**Implementation:**
+```typescript
+// test-flows/computer/OrderComputerFlow.ts
+export default class OrderComputerFlow {
+    async buildCompSpecAndAddToCart(componentClass, data): Promise<void> {
+        const computerComp = this.fixture.computerDetailsPage.computerComp(componentClass);
+        await computerComp.selectProcessorType(data.processorType);
+        await computerComp.selectRAMType(data.ram);
+        // ... more steps
+    }
+}
+```
+
+#### 4. Fixture Pattern (Dependency Injection)
+
+**What:** Playwright fixtures provide test dependencies through constructor injection.
+
+**Why:**
+- Automatic resource cleanup
+- Declarative dependencies
+- Composable via `mergeTests`
+
+**Implementation:**
+```typescript
+// fixtures/PageObjectTestFixture.ts
+export const test = pageObjectFixture.extend<PageObjectFixtures>({
+    computerDetailsPage: async({page}, use) => {
+        const computerDetailsPage = new ComputerDetailsPage(page);
+        await use(computerDetailsPage);
+    },
+});
+
+// test-flows/computer/OrderComputerFlow.ts
+export const test = mergeTests(pageObjectFixtures, globalTestAll)
+    .extend<{ orderComputerFlow: OrderComputerFlow }>({
+        orderComputerFlow: async ({ checkoutPage, ... }, use) => {
+            const flow = new OrderComputerFlow({ checkoutPage, ... });
+            await use(flow);
+        }
+    });
+```
+
+#### 5. Data-Driven Testing
+
+**What:** Same test logic executed with multiple data sets from JSON files.
+
+**Why:**
+- Comprehensive coverage with minimal code
+- Easy to add new test cases
+- Data separated from logic
+
+**Implementation:**
+```typescript
+// tests/computer/CheapComputerTest.spec.ts
+import testData from '../../test-data/computer/CheapComputerData.json';
+
+testData.forEach(computerData => {
+    test(`Test computer | RAM: ${computerData.ram}`, async ({ orderComputerFlow }) => {
+        await orderComputerFlow.buildCompSpecAndAddToCart(
+            CheapComputerComponent, 
+            computerData
+        );
+    });
+});
+```
+
+#### 6. Decorator Pattern
+
+**What:** TypeScript decorators for component selector metadata.
+
+**Why:**
+- Declarative selector definition
+- Selector available as static property
+- Cleaner component instantiation
+
+**Implementation:**
+```typescript
+// modules/components/SelectorDecorator.ts
+export function selector(selectorValue: any) {
+    return function (target: any) {
+        target.selectorValue = selectorValue;
+    }
+}
+
+// Usage
+@selector(".product-essential")
+export default class CheapComputerComponent { }
+```
+
+### Pattern Relationships
+
+```mermaid
+graph TB
+    subgraph "Test Layer"
+        TEST[Test Spec]
+    end
+    
+    subgraph "Infrastructure"
+        FIX[Fixtures]
+        DATA[Test Data]
+        CONST[Constants]
+    end
+    
+    subgraph "Business Logic"
+        FLOW[Flows]
+    end
+    
+    subgraph "UI Abstraction"
+        PAGE[Page Objects]
+        COMP[Components]
+    end
+    
+    subgraph "Framework"
+        PW[Playwright API]
+    end
+    
+    TEST -->|uses| FIX
+    TEST -->|reads| DATA
+    TEST -->|uses| CONST
+    FIX -->|creates| FLOW
+    FIX -->|creates| PAGE
+    FLOW -->|orchestrates| PAGE
+    PAGE -->|composes| COMP
+    COMP -->|wraps| PW
+```
+
+---
+
+## 6. Test Design Guidelines
+
+### Creating a New Test
+
+#### Step 1: Identify the Test Scenario
+
+Determine if you need:
+- A new Flow (multi-step business process)
+- New Page Objects/Components (new UI elements)
+- New test data (different input combinations)
+- Just a new test using existing infrastructure
+
+#### Step 2: Choose the Right Approach
+
+```mermaid
+flowchart TD
+    A[New Test Scenario] --> B{Existing Flow?}
+    B -->|Yes| C[Create test using existing fixtures/flows]
+    B -->|No| D{Existing Pages/Components?}
+    D -->|Yes| E[Create new Flow using existing PO]
+    D -->|No| F[Create Component → Page → Flow → Test]
+```
+
+#### Step 3: Layer Responsibilities
+
+| Layer | Responsibilities | Code Examples |
+|-------|-----------------|---------------|
+| **Test** | Define test cases, use fixtures, assert outcomes | `test('name', async ({ flow }) => { })` |
+| **Fixture** | Provide dependencies, no navigation | `await use(new PageObject(page))` |
+| **Flow** | Orchestrate business steps, assertions | `await flow.buildAndAddToCart()` |
+| **Page Object** | Expose components, page-level actions | `return new Component(locator)` |
+| **Component** | Encapsulate element interactions | `await this.component.locator().click()` |
+
+### Test File Template
+
+```typescript
+import { test } from '../../test-flows/computer/OrderComputerFlow';
+import CheapComputerComponent from '../../modules/components/computer/CheapComputerComponent';
+import testData from '../../test-data/computer/CheapComputerData.json';
+import PAYMENT_METHOD from '../../constants/Payment';
+import CREDIT_CARD_TYPE from '../../constants/CreditCardType';
+import ROUTES from '../../constants/Routes';
+
+testData.forEach(computerData => {
+    test(`Test scenario | ${computerData.ram}`, async ({ page, orderComputerFlow }) => {
+        // 1. Navigate (explicit in test body, using the Routes constant)
+        await page.goto(ROUTES.buildCheapComputer);
+        
+        // 2. Execute business flow
+        await orderComputerFlow.buildCompSpecAndAddToCart(CheapComputerComponent, computerData);
+        await orderComputerFlow.verifyShoppingCart();
+        
+        // 3. Complete checkout
+        await orderComputerFlow.agreeTOSAndCheckout();
+        await orderComputerFlow.inputBillingAddress();
+        await orderComputerFlow.inputShippingAddress();
+        await orderComputerFlow.selectShippingMethod();
+        await orderComputerFlow.selectPaymentMethod(PAYMENT_METHOD.creditCard);
+        await orderComputerFlow.inputPaymentInformation(CREDIT_CARD_TYPE.discover);
+        await orderComputerFlow.confirmOrder();
+    });
+});
+```
+
+### Best Practices
+
+#### DO:
+- ✅ Import `test` from Flow (includes merged fixtures)
+- ✅ Navigate explicitly in test body with `page.goto()`
+- ✅ Use constants for magic strings
+- ✅ Use data-driven approach for variations
+- ✅ Keep tests focused on one scenario
+- ✅ Use meaningful test names
+
+#### DON'T:
+- ❌ Put navigation inside fixtures (except worker-scoped warmup)
+- ❌ Create Playwright locators directly in tests
+- ❌ Hardcode test data in test files
+- ❌ Mix assertions across multiple flows
+- ❌ Use `page.waitForTimeout()` (use proper waits)
+
+### Creating New Components
+
+```typescript
+import { Locator } from "@playwright/test";
+import { selector } from "../SelectorDecorator";
+
+@selector("#my-component-root")
+export default class MyNewComponent {
+    protected component: Locator;
+    
+    // Private selectors (relative to component root)
+    private submitBtnSel = 'button[type="submit"]';
+    
+    constructor(component: Locator) {
+        this.component = component;
+    }
+    
+    // Public action methods
+    public async clickSubmit(): Promise<void> {
+        await this.component.locator(this.submitBtnSel).click();
+    }
+    
+    // Public getter methods
+    public async getErrorMessage(): Promise<string> {
+        return await this.component.locator('.error').textContent();
+    }
+}
+```
+
+---
+
+## 7. Environment Configuration
+
+### Implemented Setup
+
+Multi-environment configuration is implemented using `dotenv` + per-environment files. `playwright.config.js` loads `.env.${ENV}` (default `qa`) and reads `BASE_URL` / `HEADLESS` from it:
+
+```javascript
+// playwright.config.js
+require('dotenv').config({ path: `.env.${process.env.ENV || 'qa'}` });
+
+module.exports = defineConfig({
+    use: {
+        baseURL: process.env.BASE_URL || 'https://demowebshop.tricentis.com',
+        headless: process.env.HEADLESS === 'true'
+    }
+});
+```
+
+| File | Purpose | Tracked in Git? |
+|------|---------|------------------|
+| `.env.example` | Template documenting all variables | Yes |
+| `.env.dev` | Dev environment values | No (gitignored) |
+| `.env.qa` | QA environment values (default) | No (gitignored) |
+| `.env.prod` | Prod environment values (`HEADLESS=true`) | No (gitignored) |
+
+**One-time prerequisite** (not yet run in this workspace):
+```bash
+npm install dotenv cross-env --save-dev
+```
+
+**Running against an environment:**
+
+```powershell
+# PowerShell
+$env:ENV="dev"; npx playwright test
+$env:ENV="qa"; npx playwright test
+$env:ENV="prod"; npx playwright test
+Example:
+$env:ENV="dev"; npx playwright test tests/computer/CheapComputerFixtureTest.spec.ts
+```
+
+**Recommended npm scripts** (add to `package.json`, requires `cross-env` for cross-platform support):
+```json
+"scripts": {
+  "test:dev": "cross-env ENV=dev playwright test",
+  "test:qa": "cross-env ENV=qa playwright test",
+  "test:prod": "cross-env ENV=prod playwright test"
+}
+```
+```bash
+npm run test:dev
+npm run test:qa
+```
+
+### Alternative: Playwright Projects
+
+For cases where you want per-environment `baseURL` without `.env` files, `projects` can be used instead:
+
+```javascript
+projects: [
+    { name: 'dev', use: { ...devices['Desktop Chrome'], baseURL: 'https://dev.demowebshop.tricentis.com' } },
+    { name: 'qa',  use: { ...devices['Desktop Chrome'], baseURL: 'https://qa.demowebshop.tricentis.com' } },
+],
+```
+```bash
+npx playwright test --project=dev
+```
+
+### Handling Credentials
+
+`test-data/DefaultCheckoutUser.ts` wraps the raw `DefaultCheckoutUser.json` and overrides `email` with `process.env.TEST_USER_EMAIL` when set, so no real-looking email is hardcoded into what tests actually use:
+
+```typescript
+// test-data/DefaultCheckoutUser.ts
+import defaultUserData from './DefaultCheckoutUser.json';
+
+const DefaultCheckoutUser = {
+    ...defaultUserData,
+    email: process.env.TEST_USER_EMAIL || defaultUserData.email,
+};
+
+export default DefaultCheckoutUser;
+```
+
+> Always import this `.ts` wrapper (not the raw `.json`) in flows/tests that need checkout user data.
+
+---
+
+## 8. Recommendations
+
+### Code Quality Improvements (Not Yet Implemented)
+
+1. **Add ESLint + Prettier** for consistent code style
+2. **Add pre-commit hooks** for automated checks
+3. **Add test tagging** for selective test execution:
+   ```typescript
+   test('scenario @smoke @checkout', async () => { });
+   ```
+4. **Add parallel execution** configuration:
+   ```javascript
+   fullyParallel: true,
+   workers: process.env.CI ? 2 : undefined,
+   ```
+
+---
+
+## Quick Reference
+
+### Common Commands
 
 ```bash
-npx playwright test --config=playwright.config.js
-npx playwright test tests/computer/CheapComputerTest.spec.ts --config=playwright.config.js
-npx playwright test tests/computer/StandardComputerTest.spec.ts --config=playwright.config.js
+# Run all tests
+npm test
+
+# Run specific folder
+npx playwright test computer/
+
+# Run with UI
+npm run ui
+
+# Debug mode
+npx playwright test --debug
+
+# Generate report
 npx playwright show-report
+npx allure generate allure-results && npx allure open
 ```
 
-## 13. Tom tat
+### File Naming Conventions
 
-Neu ban muon tao E2E test moi trong repo nay, hay nho quy tac don gian sau:
+| Type | Convention | Example |
+|------|------------|---------|
+| Test | `{Feature}Test.spec.ts` | `CheapComputerTest.spec.ts` |
+| Page | `{PageName}Page.ts` | `CheckoutPage.ts` |
+| Component | `{ComponentName}Component.ts` | `BillingAddressComponent.ts` |
+| Flow | `{Feature}Flow.ts` | `OrderComputerFlow.ts` |
+| Fixture | `{Purpose}Fixture.ts` | `PageObjectTestFixture.ts` |
+| Test Data | `{Feature}Data.json` | `CheapComputerData.json` |
+| Constants | `{Domain}.ts` | `Payment.ts` |
 
-1. Dat test scenario trong `tests/`
-2. Dat du lieu trong `test-data/`
-3. Dat business steps trong `test-flows/`
-4. Dat page-level actions trong `modules/pages/`
-5. Dat component-level actions trong `modules/components/`
-6. Tai su dung base classes toi da
-7. Chay test voi `playwright.config.js`
+---
 
-Mo hinh nay phu hop khi project co nhieu test case cung dung chung page va component, va can duy tri source code de doc, de mo rong, de bao tri.
+*Last Updated: 2026-07-30*

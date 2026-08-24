@@ -3,3 +3,11 @@ node_modules
 allure-results
 /test-results/
 /playwright-report/
+
+# Environment files (keep .env.example for reference)
+.env
+.env.dev
+.env.qa
+.env.prod
+.env.local
+.env.example

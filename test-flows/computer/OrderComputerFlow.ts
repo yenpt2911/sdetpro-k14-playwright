@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test"
-import defaultCheckoutUser from "../../test-data/DefaultCheckoutUser.json"
+import defaultCheckoutUser from "../../test-data/DefaultCheckoutUser"
 import defaultCheckoutCard from "../../test-data/DefaultCheckoutCardData.json"
 import ComputerDetailsPage, { ComputerComponentConstructor } from "../../modules/pages/ComputerDetailsPage";
 import ComputerEssentialComponent from "../../modules/components/computer/ComputerEssentialComponent";
@@ -74,7 +74,7 @@ export default class OrderComputerFlow {
 
 
         // Handle waiting add to cart
-        computerComp.clickOnAddToCartBtn();
+        await computerComp.clickOnAddToCartBtn();
         const barNotificationText = await computerDetailPage.getBarNotificationText();
         if (!barNotificationText.startsWith("The product has been added")) {
             throw new Error('Failed to add product to cart');
@@ -82,8 +82,6 @@ export default class OrderComputerFlow {
 
         // Navigate to the shopping cart
         await computerDetailPage.headerComponent().clickOnShoppingCartLink();
-
-        //await this.page.waitForTimeout(3 * 1000);
     }
 
     public async verifyShoppingCart(): Promise<void> {
