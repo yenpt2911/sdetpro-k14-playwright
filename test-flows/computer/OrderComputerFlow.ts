@@ -137,6 +137,13 @@ export default class OrderComputerFlow {
         await shippingAddressComponent.clickOnContinueButton();
     }
 
+    public async verifyBillingAddressValidationErrors(expectedErrors: string[]): Promise<void> {
+        const billingAddressComponent: BillingAddressComponent = this.fixture.checkoutPage.billingAddressComponent();
+        const actualErrors = await billingAddressComponent.validationErrorMessages();
+
+        expect(actualErrors).toEqual(expectedErrors);
+    }
+
     public async selectShippingMethod(): Promise<void> {
         /**
         * 1. Ramdomly select a method: Math.floor(Math.random()* sizeOfInterableData) -> in-range index

@@ -19,6 +19,7 @@ export default class BillingAddressComponent extends CheckoutDetailsComponent {
     private readonly address1Sel = '#BillingNewAddress_Address1';
     private readonly zipCodeSel = '#BillingNewAddress_ZipPostalCode';
     private readonly phonenumberSel = '#BillingNewAddress_PhoneNumber';
+    private readonly validationErrorSel = '.field-validation-error, .validation-summary-errors li';
 
     protected constructor(component: Locator) {
         super(component);
@@ -66,6 +67,36 @@ export default class BillingAddressComponent extends CheckoutDetailsComponent {
 
     public async inputPhonenumber(phonenumber: string): Promise<void> {
         await this.component.locator(this.phonenumberSel).fill(phonenumber);
+    }
+
+    public async inputMandatoryAddressFields(addressData: any): Promise<void> {
+        const { firstName, lastName, email, country, state, city, add1, zipCode, phoneNum } = addressData;
+
+        await this.inputFirstname(firstName);
+        await this.inputLastname(lastName);
+        await this.inputEmailAddress(email);
+        await this.selectCountry(country);
+        if (state) {
+            await this.selectState(state);
+        }
+        await this.inputCity(city);
+        await this.inputAddress(add1);
+        await this.inputZipCode(zipCode);
+        await this.inputPhonenumber(phoneNum);
+    }
+
+    public async validationErrorMessages(): Promise<string[]> {
+        const errorLocators = await this.component.locator(this.validationErrorSel).all();
+        const errors: string[] = [];
+
+        for (const errorLocator of errorLocators) {
+            const text = (await errorLocator.textContent())?.trim();
+            if (text) {
+                errors.push(text);
+            }
+        }
+
+        return errors;
     }
 
 
