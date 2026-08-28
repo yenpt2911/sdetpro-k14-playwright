@@ -7,6 +7,7 @@ const ROUTES = {
     home: '/',
     buildCheapComputer: '/build-your-cheap-own-computer',
     buildStandardComputer: '/build-your-own-computer',
+    register: '/register',
 };
 
 export default ROUTES;

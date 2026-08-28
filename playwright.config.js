@@ -20,7 +20,12 @@ module.exports = defineConfig({
         trace: 'on-first-retry',
         video: 'on-first-retry',
         screenshot: 'only-on-failure',
-        headless: process.env.HEADLESS === 'true'
+        headless: process.env.HEADLESS === 'true',
+        // The `request` fixture (APIRequestContext) doesn't inherit http_proxy/https_proxy env vars
+        // like Chromium does, so it must be configured explicitly for API tests to reach the network.
+        proxy: process.env.https_proxy || process.env.HTTPS_PROXY
+            ? { server: process.env.https_proxy || process.env.HTTPS_PROXY }
+            : undefined,
     }
 
 })

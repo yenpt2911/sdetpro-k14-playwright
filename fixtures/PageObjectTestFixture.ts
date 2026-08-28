@@ -4,6 +4,8 @@ import CheckoutPage from '../modules/pages/CheckoutPage';
 import CheckoutOptionsPage from '../modules/pages/CheckoutOptionsPage';
 import ComputerDetailsPage from '../modules/pages/ComputerDetailsPage';
 import ShoppingCartPage from '../modules/pages/ShoppingCartPage';
+import SearchResultsPage from '../modules/pages/SearchResultsPage';
+import RegisterPage from '../modules/pages/RegisterPage';
 
 export type PageObjectFixtures = {
     homePage: HomePage,
@@ -11,6 +13,8 @@ export type PageObjectFixtures = {
     checkoutOptionsPage: CheckoutOptionsPage,
     computerDetailsPage: ComputerDetailsPage,
     shoppingCartPage: ShoppingCartPage,
+    searchResultsPage: SearchResultsPage,
+    registerPage: RegisterPage,
 };
 
 export const test = pageObjectFixture.extend<PageObjectFixtures>({
@@ -39,5 +43,15 @@ export const test = pageObjectFixture.extend<PageObjectFixtures>({
     shoppingCartPage: async({page}, use) => {
         const shoppingCartPage = new ShoppingCartPage(page);
         await use(shoppingCartPage);
+    },
+
+    searchResultsPage: async({page}, use) => {
+        const searchResultsPage = new SearchResultsPage(page);
+        await use(searchResultsPage);
+    },
+
+    registerPage: async({page}, use) => {
+        const registerPage = new RegisterPage(page);
+        await use(registerPage);
     }
 });

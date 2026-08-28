@@ -19,4 +19,9 @@ export default class SearchComponent {
     searchBtn(): Locator {
         return this.component.locator(this.seachBtnLoc);
     }
+
+    public async search(keyword: string): Promise<void> {
+        await this.searchBox().fill(keyword);
+        await this.searchBtn().click();
+    }
 }
