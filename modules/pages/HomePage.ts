@@ -20,6 +20,14 @@ export default class HomePage {
 
     }
 
+    public async openJewelryCategory(): Promise<void> {
+        await this.page.locator('a[href="/jewelry"]').first().click();
+    }
+
+    public async openProduct(productName: string): Promise<void> {
+        await this.page.getByRole('link', { name: productName, exact: true }).click();
+    }
+
     footerComponent(): FooterComponent {
         return new FooterComponent(this.page.locator(FooterComponent.selector));
     }

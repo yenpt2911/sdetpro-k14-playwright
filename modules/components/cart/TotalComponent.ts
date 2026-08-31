@@ -3,15 +3,14 @@ import { selector } from "../SelectorDecorator";
 
 @selector(".cart-footer .totals")
 export default class TotalComponent {
+    public static selectorValue = ".cart-footer .totals";
     protected component: Locator;
 
     private priceTableRowSel = 'table tr';
-    private priceTypeSel = '.cart-total-left span';
-    private priceValueSel = '.cart-total-right .product-price';
     private termOfServiceCheckboxSel = '#termsofservice';
     private checkoutBtnSel = '#checkout';
 
-    protected constructor(component: Locator) {
+    public constructor(component: Locator) {
         this.component = component;
     }
 
@@ -19,9 +18,10 @@ export default class TotalComponent {
         let priceCategories = {};
         const priceTableRowElems = await this.component.locator(this.priceTableRowSel).all();
         for (let tableRowEle of priceTableRowElems) {
-            const priceTypeText = await tableRowEle.locator(this.priceTypeSel).innerText();
-            const priceValueText = await tableRowEle.locator(this.priceValueSel).innerText();
-            priceCategories[priceTypeText] = Number(priceValueText);
+            const cells = await tableRowEle.locator('td').allTextContents();
+            if (cells.length >= 2) {
+                priceCategories[cells[0].trim()] = Number(cells[1].trim());
+            }
         }
         return priceCategories;
     }

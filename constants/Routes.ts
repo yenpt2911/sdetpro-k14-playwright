@@ -5,6 +5,8 @@
  */
 const ROUTES = {
     home: '/',
+    jewelry: '/jewelry',
+    jewelryProduct: '/black-white-diamond-heart',
     buildCheapComputer: '/build-your-cheap-own-computer',
     buildStandardComputer: '/build-your-own-computer',
     register: '/register',

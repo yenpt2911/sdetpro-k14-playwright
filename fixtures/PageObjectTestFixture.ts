@@ -6,6 +6,7 @@ import ComputerDetailsPage from '../modules/pages/ComputerDetailsPage';
 import ShoppingCartPage from '../modules/pages/ShoppingCartPage';
 import SearchResultsPage from '../modules/pages/SearchResultsPage';
 import RegisterPage from '../modules/pages/RegisterPage';
+import JewelryDetailsPage from '../modules/pages/JewelryDetailsPage';
 
 export type PageObjectFixtures = {
     homePage: HomePage,
@@ -15,6 +16,7 @@ export type PageObjectFixtures = {
     shoppingCartPage: ShoppingCartPage,
     searchResultsPage: SearchResultsPage,
     registerPage: RegisterPage,
+    jewelryDetailsPage: JewelryDetailsPage,
 };
 
 export const test = pageObjectFixture.extend<PageObjectFixtures>({
@@ -53,5 +55,10 @@ export const test = pageObjectFixture.extend<PageObjectFixtures>({
     registerPage: async({page}, use) => {
         const registerPage = new RegisterPage(page);
         await use(registerPage);
+    },
+
+    jewelryDetailsPage: async({page}, use) => {
+        const jewelryDetailsPage = new JewelryDetailsPage(page);
+        await use(jewelryDetailsPage);
     }
 });
