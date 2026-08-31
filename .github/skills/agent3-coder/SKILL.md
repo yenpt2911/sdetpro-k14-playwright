@@ -1,11 +1,14 @@
 ---
-name: generate-playwright-test
-description: 'Generate new Playwright test scripts for this project (sdetpro-k14-playwright) that follow the established layered architecture: Test -> Fixture -> Flow -> Page Object -> Component. Use when the user asks to "create a new test", "add a test for [feature]", "generate a test script", "write a test for [page/product]", or needs new Page Objects/Components/Flows/Fixtures to support a new test scenario. NOT for fixing bugs in existing tests, refactoring, or generic Playwright questions unrelated to this project structure.'
+name: agent3-coder
+description: 'Write Playwright test scripts for this project (sdetpro-k14-playwright) from a test script implementation plan and verified locators, following the established layered architecture: Test -> Fixture -> Flow -> Page Object -> Component. Use when the user asks to "create a new test", "add a test for [feature]", "generate a test script", "write a test for [page/product]", or needs new Page Objects/Components/Flows/Fixtures to support a new test scenario. NOT for fixing bugs in existing tests, refactoring, or generic Playwright questions unrelated to this project structure.'
 ---
 
-# Generate Playwright Test (sdetpro-k14-playwright)
+# agent3-coder
 
-Generates new test scripts, and any missing Page Objects / Components / Flows / Fixtures they depend on, following this project's conventions. See [README.md](../../../README.md) for full architecture background.
+- **Input:** the plan from `agent1-tc-planner-test-script-implementation` (spec files, reuse/new layer decisions, execution order) and the verified Component `.ts` stubs/locators from `agent2-explorer`.
+- **Output:** finished test script `.ts` files (and any Component/Page Object/Flow/Fixture files they depend on).
+
+Generates new test scripts, and any missing Page Objects / Components / Flows / Fixtures they depend on, following this project's conventions. See [README.md](../../../README.md) for full architecture background and [.github/project-config.md](../../project-config.md) for env/routes/fixture/selector conventions.
 
 ## Architecture (must follow)
 
@@ -21,15 +24,27 @@ Test Spec -> Test Data (test-data/**, JSON or .ts) + Constants (constants/**)
 
 Each layer only talks to the layer directly below it. Never skip a layer (e.g. a test must not build a `Locator` directly — that belongs in a Component).
 
+## Canonical example (use as the format for every new test script)
+
+[CheapComputerFixtureTest.spec.ts](../../../tests/computer/CheapComputerFixtureTest.spec.ts) -> [OrderComputerFlow.ts](../../../test-flows/computer/OrderComputerFlow.ts) -> `modules/pages/ComputerDetailsPage.ts` -> `modules/components/computer/CheapComputerComponent.ts`, driven by [CheapComputerData.json](../../../test-data/computer/CheapComputerData.json). This is a real, working instance of every rule in this file: JSON test data lives under `test-data/<domain>/`, the spec only imports `test` from the Flow + the JSON data + `constants/Routes.ts`, and every UI step is a named Flow method — never an inline Component/Page call in the spec. When in doubt about formatting a new test script, mirror this chain instead of inventing a new shape.
+
 ## Step 1: Determine what already exists
 
 Before generating anything, check what can be reused:
 
-1. Search `modules/pages/` for an existing Page Object for the target page.
-2. Search `modules/components/` for existing Components covering the needed UI section.
-3. Search `test-flows/` for an existing Flow covering the business workflow (e.g. `OrderComputerFlow.ts` for checkout).
-4. Search `constants/Routes.ts` for the relative URL path; add a new entry if missing (never hardcode absolute URLs like `https://demowebshop.tricentis.com/...` in a test).
-5. Search `test-data/` for reusable data files (JSON) or `.ts` wrappers for env-overridable data (see `DefaultCheckoutUser.ts` pattern).
+1. Check for a Component stub already persisted by `agent2-explorer` at `modules/components/<domain>/<Name>Component.ts` — fill in its methods instead of creating a duplicate Component.
+2. Search `modules/pages/` for an existing Page Object for the target page.
+3. Search `modules/components/` for existing Components covering the needed UI section.
+4. Search `test-flows/` for an existing Flow covering the business workflow (e.g. `OrderComputerFlow.ts` for checkout).
+5. Search `constants/Routes.ts` for the relative URL path; add a new entry if missing (never hardcode absolute URLs like `https://demowebshop.tricentis.com/...` in a test).
+6. Search `test-data/` for reusable data files (JSON) or `.ts` wrappers for env-overridable data (see `DefaultCheckoutUser.ts` pattern).
+7. Within any file you are about to touch, search for an existing method/function that already does what you need (a Component action/getter, a Flow business step, a `utils/**` helper like `uniqueEmail()`) before writing a new one. Reuse it as-is, or extend its signature (e.g. add an optional parameter) rather than adding a near-duplicate method next to it.
+
+## Reuse-first coding rules
+
+- Only write a new method/function for behavior that does not already exist anywhere in `modules/`, `test-flows/`, or `utils/`. If it exists, call it — do not re-implement it under a new name.
+- If the logic you need is generic (not tied to one specific test case), implement it as a reusable/common method: a parameterized Component or Flow method, or a shared helper in `utils/**` — not inlined in the test spec and not copy-pasted per scenario. This makes it directly reusable by later tests instead of being re-written again.
+- For test data: read the existing files under `test-data/**` first. Only add the specific data that is missing (a new array entry, a new field, or a new file for a genuinely new shape) — never recreate a dataset that already covers the same case elsewhere.
 
 Only create a new layer (Component/Page/Flow/Fixture) when nothing reusable exists. Follow the decision flow:
 
@@ -163,7 +178,7 @@ export default class MyFlow {
 
 - `constants/Routes.ts`: add a new relative path property (never a full URL) if the test needs a new starting page.
 - `constants/<Domain>.ts`: add new constant maps for magic strings (payment methods, card types, dropdown values) — never inline string literals for values used more than once.
-- `test-data/<domain>/<Name>Data.json`: add new data-driven fixtures as arrays of plain objects for `testData.forEach(...)` patterns.
+- Test data stored as `.json` MUST live under `test-data/<domain>/<Name>Data.json` — never inline a data array/object directly in the test spec, and never place a `.json` data file outside `test-data/`. Read the existing files in `test-data/<domain>/` first — extend an existing file with the missing entry/field if the shape already fits; only add a brand-new file when no existing dataset covers this shape. Add new data-driven fixtures as arrays of plain objects for `testData.forEach(...)` patterns.
 
 ## Step 7: Write the test spec
 
@@ -201,6 +216,7 @@ If no data variation is needed, use a single `test('Test <scenario>', async ({ p
 1. Run `get_errors` on all new/changed `.ts` files.
 2. Run the new spec: `npx playwright test tests/<domain>/<Feature>Test.spec.ts`.
 3. Confirm no `page.goto()` is missing (a symptom is a test failing immediately with a blank/about:blank page) and no hardcoded absolute URLs were introduced.
+4. If the run fails, hand off to `agent4-debugger` instead of patching the failure with waits or retries.
 
 ## Common Pitfalls (from this project's history)
 
@@ -209,3 +225,5 @@ If no data variation is needed, use a single `test('Test <scenario>', async ({ p
 - **Missing `await`**: component action methods (e.g. `clickOnAddToCartBtn()`) are async — always `await` them, otherwise the flow proceeds before the click completes.
 - **Hardcoded absolute URLs**: use `constants/Routes.ts` + `baseURL` from `playwright.config.js`/`.env.*`, not `https://demowebshop.tricentis.com/...` inline.
 - **Duplicate near-identical test files**: check `tests/<domain>/` for an existing spec covering the same scenario before creating a new one.
+- **Duplicate near-identical methods**: before adding a new Component/Flow method, search the file (and shared `utils/**` helpers) for one that already does the same thing — extend its parameters/reuse it instead of writing a second near-duplicate method.
+- **Duplicate near-identical test data**: before adding a new `test-data/**` file or entry, check whether an existing dataset already covers the same shape/scenario — extend it instead of creating a parallel copy.

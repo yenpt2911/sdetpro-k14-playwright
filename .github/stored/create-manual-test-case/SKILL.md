@@ -54,4 +54,4 @@ Repeat one row per step and keep `TestCaseId` the same for all rows belonging to
 
 ## Handoff
 
-The output is consumed by `requirement-analysis`, `inspect-ui-before-automation`, and `generate-test-from-test-case`. Do not generate Playwright code in this skill unless the user explicitly requests it.
+The output is consumed by `plan-test-script-implementation` to group cases into spec files and decide execution order, then by `inspect-ui-before-automation` for element verification and `generate-playwright-test` for implementation. Do not generate Playwright code in this skill unless the user explicitly requests it.
