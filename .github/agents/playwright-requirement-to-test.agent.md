@@ -41,7 +41,7 @@ Load `agent3-coder`. Consume the plan from phase 2 and the locator stubs from ph
 Test -> Fixture -> Flow -> Page Object -> Component -> Playwright API
 ```
 
-Create only missing layers. Before writing any new method or test-data entry, search existing Components/Flows/`utils/**`/`test-data/**` for something reusable — extend it (e.g. an optional parameter) instead of duplicating it, and write genuinely new logic as a reusable/parameterized method so later tests can call it directly. Keep `page.goto(ROUTES...)` explicit in the test body, and add assertions for every important expected result.
+Create only missing layers. Before writing any new method or test-data entry, search existing Components/Flows/`utils/**`/`test-data/**` for something reusable — extend it (e.g. an optional parameter) instead of duplicating it, and write genuinely new logic as a reusable/parameterized method so later tests can call it directly. Keep `page.goto(ROUTES...)` explicit in the test body, and add assertions for every important expected result. Every `test()` title must map 1:1 to the manual test case it implements (`<TC-ID>: <scenario title>`) — never invent an unrelated title when a phase-1 test case ID exists for that scenario.
 
 Load `test-data-environment` whenever test data must be unique per run (e.g. registration email) or environment-overridable — do not invent ad-hoc uniqueness logic when that skill already defines the pattern.
 
@@ -57,6 +57,10 @@ If it passes, report the result and stop. If it fails, follow [agent-failure-rou
 
 Do not hide failures with arbitrary waits or blind retries.
 
+Before the final report, confirm traceability: every manual test case ID produced in phase 1 must appear in a test title in the generated spec file(s). Resolve the ACTUAL runtime titles with `npx playwright test <path(s)> --list` — do not grep the raw `.spec.ts` source for the TC ID pattern, because data-driven specs interpolate the ID from an imported JSON/data file (e.g. `` `${testCase.testCaseId}` ``) and will not contain the literal ID string in source, producing a false coverage gap. List any TC ID that has no matching resolved title as an explicit coverage gap in the final report — do not report the pipeline as complete if a planned test case was silently dropped.
+
+Final cleanup (mandatory, before ending the response): the only files this workflow keeps are the delivered automation — the test spec(s) plus whatever Component/Page Object/Flow/Fixture/test-data/constants files they depend on. Delete every scratch/temporary file created along the way that is not one of those (e.g. exploration scripts under `tmp/` from phase 3, ad-hoc debug scripts from phase 5, temporary notes) via an actual terminal command. Do not leave leftover files in the repo just because the run passed.
+
 ## Repository rules
 
 - Use `playwright.config.js`; it is the active config for `tests/`.
@@ -66,6 +70,7 @@ Do not hide failures with arbitrary waits or blind retries.
 - Never place raw locators directly in test specs.
 - Do not commit, reset, or revert unrelated user changes.
 - When a skill file under `.github/skills/` is added, renamed, or removed, update this agent and any other skill that references it in the same change — do not leave dangling skill names.
+- Keep only the delivered automation files after the workflow finishes; delete any scratch/debug file created during the process that isn't part of the final test spec + its dependencies.
 
 ## Reporting format
 

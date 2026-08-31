@@ -35,6 +35,7 @@ Only runs when `agent3-coder`'s output fails. Do not invent new scenarios or ref
 - Never mark a test as passed without an actual green run in the terminal output.
 - If the fix requires a new Component/Page Object/Flow/Fixture that doesn't exist, hand back to `agent3-coder` instead of building new layers here.
 - Keep the fix scoped to the owning layer; do not opportunistically refactor other passing tests.
+- Do not leave any scratch/debug script behind after the test passes — only the fixed automation files (spec + dependencies) should remain.
 
 ## Handoff
 

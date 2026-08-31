@@ -28,6 +28,8 @@ Each layer only talks to the layer directly below it. Never skip a layer (e.g. a
 
 [CheapComputerFixtureTest.spec.ts](../../../tests/computer/CheapComputerFixtureTest.spec.ts) -> [OrderComputerFlow.ts](../../../test-flows/computer/OrderComputerFlow.ts) -> `modules/pages/ComputerDetailsPage.ts` -> `modules/components/computer/CheapComputerComponent.ts`, driven by [CheapComputerData.json](../../../test-data/computer/CheapComputerData.json). This is a real, working instance of every rule in this file: JSON test data lives under `test-data/<domain>/`, the spec only imports `test` from the Flow + the JSON data + `constants/Routes.ts`, and every UI step is a named Flow method — never an inline Component/Page call in the spec. When in doubt about formatting a new test script, mirror this chain instead of inventing a new shape.
 
+For copy-paste-ready code templates of every layer (Component incl. abstract-base/variant shape, Page Object incl. generic factory, Fixture, Flow, Constants, Test data, Test spec, `utils/` helper), use [TEMPLATE.md](TEMPLATE.md) — generate every new automation file starting from the matching template there instead of free-styling a new shape.
+
 ## Step 1: Determine what already exists
 
 Before generating anything, check what can be reused:
@@ -38,12 +40,20 @@ Before generating anything, check what can be reused:
 4. Search `test-flows/` for an existing Flow covering the business workflow (e.g. `OrderComputerFlow.ts` for checkout).
 5. Search `constants/Routes.ts` for the relative URL path; add a new entry if missing (never hardcode absolute URLs like `https://demowebshop.tricentis.com/...` in a test).
 6. Search `test-data/` for reusable data files (JSON) or `.ts` wrappers for env-overridable data (see `DefaultCheckoutUser.ts` pattern).
-7. Within any file you are about to touch, search for an existing method/function that already does what you need (a Component action/getter, a Flow business step, a `utils/**` helper like `uniqueEmail()`) before writing a new one. Reuse it as-is, or extend its signature (e.g. add an optional parameter) rather than adding a near-duplicate method next to it.
+7. Read `utils/` in full (currently `AdHelper.ts`, `PageHelper.ts`, `TestDataHelper.ts`) — these are the project's shared/common helpers. Know what each one already provides before writing any new helper.
+8. Before writing ANY new function/method, run a project-wide search (grep) for its likely name/purpose across `modules/**`, `test-flows/**`, and `utils/**` — not only inside the file you are currently editing. This is mandatory, not optional: never write a new function without first confirming an equivalent doesn't already exist somewhere in the project. If a match exists, call it or extend its signature (e.g. add an optional parameter); if none exists, create it in the appropriate layer/helper.
 
 ## Reuse-first coding rules
 
 - Only write a new method/function for behavior that does not already exist anywhere in `modules/`, `test-flows/`, or `utils/`. If it exists, call it — do not re-implement it under a new name.
-- If the logic you need is generic (not tied to one specific test case), implement it as a reusable/common method: a parameterized Component or Flow method, or a shared helper in `utils/**` — not inlined in the test spec and not copy-pasted per scenario. This makes it directly reusable by later tests instead of being re-written again.
+- This check is project-wide, not file-local: search all of `modules/**`, `test-flows/**`, and `utils/**` (the project's common/shared functions) before writing any function, even a small one. Searching only the file currently being edited is not sufficient.
+- If the logic you need is generic (not tied to one specific test case), implement it as a reusable/common method instead of inlining it in the test spec or copy-pasting it per scenario. Pick the right common location by scope:
+  - Logic reusable across any domain (string/date/data generation, no UI) -> a helper in `utils/**` (e.g. `TestDataHelper.ts`).
+  - Logic reusable across Components in the same domain (e.g. shared read/validation behavior) -> a method on that domain's shared/base Component class.
+  - Logic reusable across Flows (a business step other Flows will also need) -> a method on a shared/base Flow, or a plain exported function other Flows import.
+  - If it's only ever needed by one test and unlikely to repeat, it can stay local — do not over-engineer a common helper for genuinely one-off logic.
+- After writing any new method, pause and ask: "will another Component/Flow/test plausibly need this same behavior?" If yes, make it common now (parameterized, no hardcoded per-test values) instead of waiting to refactor it later.
+- **Self-duplication scan (mandatory, do this yourself — do not wait to be asked):** after writing 2+ methods in the same class (e.g. several `inputX(value)` field setters in one Component), compare their bodies. If they only differ by a selector/constant/parameter, extract the shared shape into one `private`/`protected` helper (e.g. `fillField(selector, value)`) in that same class and have every method call it, before considering the file done. This applies even when nothing pre-existing needs to be reused — the duplication was just introduced by you in this same change and must not ship as-is.
 - For test data: read the existing files under `test-data/**` first. Only add the specific data that is missing (a new array entry, a new field, or a new file for a genuinely new shape) — never recreate a dataset that already covers the same case elsewhere.
 
 Only create a new layer (Component/Page/Flow/Fixture) when nothing reusable exists. Follow the decision flow:
@@ -190,7 +200,7 @@ Rules (from project best practices):
 - Use constants for magic strings (payment methods, card types, routes).
 - Use `testData.forEach(...)` for data-driven variations when multiple data sets exist.
 - Keep each test focused on one scenario; do not mix unrelated assertions from multiple flows.
-- Use descriptive test names that include the varying parameter, e.g. `` `Test Cheap computer component | RAM: ${computerData.ram}` ``.
+- **Test name MUST map 1:1 to the manual test case it implements.** When a `test()` implements a specific manual test case (from `agent0-create-manual-test-case`'s output / the phase-2 plan), its title MUST be built from that test case's own ID and scenario title — not a freely invented description. Format: `` `<Feature> | <TC-ID>: <manual test case's scenario title, verbatim or near-verbatim>` `` e.g. `` `Test register validation | TC-004: all fields empty` `` (the manual test case is literally titled "TC-004: all fields empty"). For a data-driven `testData.forEach`, interpolate the varying field alongside the ID so each generated test still traces back to its case, e.g. `` `Test register new account | TC-00${index+1}: gender ${data.gender ?? 'none'}` ``. Never ship a test whose title has no traceable link to a manual test case ID when one exists for that scenario.
 - Never use `page.waitForTimeout()` — rely on Playwright's auto-waiting and component methods.
 - Never build a `Locator` directly in a test — go through a Component/Page Object method.
 
@@ -213,10 +223,11 @@ If no data variation is needed, use a single `test('Test <scenario>', async ({ p
 
 ## Step 8: Validate
 
-1. Run `get_errors` on all new/changed `.ts` files.
-2. Run the new spec: `npx playwright test tests/<domain>/<Feature>Test.spec.ts`.
-3. Confirm no `page.goto()` is missing (a symptom is a test failing immediately with a blank/about:blank page) and no hardcoded absolute URLs were introduced.
-4. If the run fails, hand off to `agent4-debugger` instead of patching the failure with waits or retries.
+1. Re-read every new/changed Component/Page/Flow file and run the self-duplication scan above — extract any near-identical method bodies into a shared helper before moving on.
+2. Run `get_errors` on all new/changed `.ts` files.
+3. Run the new spec: `npx playwright test tests/<domain>/<Feature>Test.spec.ts`.
+4. Confirm no `page.goto()` is missing (a symptom is a test failing immediately with a blank/about:blank page) and no hardcoded absolute URLs were introduced.
+5. If the run fails, hand off to `agent4-debugger` instead of patching the failure with waits or retries.
 
 ## Common Pitfalls (from this project's history)
 
@@ -226,4 +237,5 @@ If no data variation is needed, use a single `test('Test <scenario>', async ({ p
 - **Hardcoded absolute URLs**: use `constants/Routes.ts` + `baseURL` from `playwright.config.js`/`.env.*`, not `https://demowebshop.tricentis.com/...` inline.
 - **Duplicate near-identical test files**: check `tests/<domain>/` for an existing spec covering the same scenario before creating a new one.
 - **Duplicate near-identical methods**: before adding a new Component/Flow method, search the file (and shared `utils/**` helpers) for one that already does the same thing — extend its parameters/reuse it instead of writing a second near-duplicate method.
+- **Self-authored duplication left unmerged**: writing several field-input methods (e.g. `inputFirstName`/`inputLastName`/`inputEmail`) as separate copy-pasted one-liners in the same Component instead of one shared `private fillField(selector, value)` helper — catch this yourself during Step 8, don't wait for a reviewer to ask "was this extracted into a common function yet?".
 - **Duplicate near-identical test data**: before adding a new `test-data/**` file or entry, check whether an existing dataset already covers the same shape/scenario — extend it instead of creating a parallel copy.

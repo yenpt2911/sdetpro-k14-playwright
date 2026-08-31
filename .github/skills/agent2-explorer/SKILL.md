@@ -18,7 +18,7 @@ Opens the live application and self-navigates through it before creating or chan
 2. Launch a real, visible Microsoft Edge browser window and navigate directly to the resolved URL — do not ask the user to describe the page; load it and read the live DOM/accessibility tree yourself. Do this by running a short, self-contained Playwright script through the terminal (e.g. under a scratch folder such as `tmp/`, never inside `tests/`), launching with `chromium.launch({ channel: 'msedge', headless: false })` (or `test.use({ channel: 'msedge' })` if driven through `@playwright/test`). An embedded/simple browser preview tool is not a substitute — the point is a real OS Edge window the user can see opening and navigating.
 3. Reproduce the manual test case's precondition live before touching the target step (e.g. log in first, create a prerequisite record, complete an earlier step) — do not assume a precondition is already satisfied just because the browser session happens to be in that state.
 4. Follow the manual test case's steps in order, performing each action (fill, select, click) against the live page to reach every screen/state the test case describes, not just the starting page.
-5. Inspect the target element's accessible role, name, label, text, attributes, surrounding structure, and its XPath — capture the XPath for every verified element regardless of which locator strategy is ultimately used in code, so it is always available as evidence.
+5. Inspect the target element's accessible role, name, label, text, attributes, surrounding structure, and its XPath — capture the XPath for every verified element regardless of which locator strategy is ultimately used in code, so it is always available as evidence. Build the XPath itself following the priority order in the "XPath generation priority" section below; never default straight to an absolute/positional path.
 6. Choose the actual Component-code locator following the priority order in the "Locator priority" section below.
 7. Execute a minimal action or assertion against the candidate locator to verify it resolves and behaves as the test case expects.
 8. Record the observed result, including redirects, dialogs, disabled states, validation messages, and dynamic behavior.
@@ -36,6 +36,17 @@ When choosing the locator to hard-code in Component code, try each strategy in o
 3. Stable test ID — `page.getByTestId('...')`
 4. Stable semantic attribute — `page.locator('#Email')`, `page.locator('[data-valmsg-for="Email"]')`
 5. CSS selector/XPath — only when none of the above are unique or stable; store the exact string as the Component's private selector field, e.g. `private emailSel = '#Email';`
+
+## XPath generation priority
+
+When recording the XPath in the evidence record (step 5), construct it in this order and stop at the first form that is unique and stable — never jump straight to an absolute/positional path:
+
+1. Unique `id` — `//*[@id='Email']`
+2. Unique stable attribute (`name`, `data-*`, `aria-*`, `type` combined with tag) — `//input[@name='Email']`, `//*[@data-valmsg-for='Email']`
+3. Tag + stable attribute combination when no single attribute is unique alone — `//button[@type='submit' and @class='button-1 register-next-step-button']`
+4. Visible text content — `//button[text()='Register']` or `//a[contains(text(),'Log in')]` — only for elements with fixed, non-dynamic text
+5. Relative path from a nearby stable ancestor (`id` or stable attribute) — `//div[@id='register-buttons']//button`
+6. Absolute/positional path (`/html[1]/body[1]/div[4]/...`) — last resort only, and only kept as supplementary evidence; never let this be the only recorded form when a higher-priority option exists, and never use it as the actual Component selector field.
 
 ## Persisting locators
 

@@ -32,24 +32,28 @@ export default class RegisterFormComponent {
         await this.component.locator(genderSel).check();
     }
 
+    private async fillField(selector: string, value: string): Promise<void> {
+        await this.component.locator(selector).fill(value);
+    }
+
     public async inputFirstName(firstName: string): Promise<void> {
-        await this.component.locator(this.firstNameSel).fill(firstName);
+        await this.fillField(this.firstNameSel, firstName);
     }
 
     public async inputLastName(lastName: string): Promise<void> {
-        await this.component.locator(this.lastNameSel).fill(lastName);
+        await this.fillField(this.lastNameSel, lastName);
     }
 
     public async inputEmail(email: string): Promise<void> {
-        await this.component.locator(this.emailSel).fill(email);
+        await this.fillField(this.emailSel, email);
     }
 
     public async inputPassword(password: string): Promise<void> {
-        await this.component.locator(this.passwordSel).fill(password);
+        await this.fillField(this.passwordSel, password);
     }
 
     public async inputConfirmPassword(confirmPassword: string): Promise<void> {
-        await this.component.locator(this.confirmPasswordSel).fill(confirmPassword);
+        await this.fillField(this.confirmPasswordSel, confirmPassword);
     }
 
     public async clickRegisterButton(): Promise<void> {
