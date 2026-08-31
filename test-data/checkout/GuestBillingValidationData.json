@@ -1,0 +1,32 @@
+[
+    {
+        "scenario": "shows required-field errors when billing address is blank",
+        "expectedErrors": [
+            "First name is required.",
+            "Last name is required.",
+            "Email is required.",
+            "Country is required.",
+            "City is required",
+            "Street address is required",
+            "Zip / postal code is required",
+            "Phone is required"
+        ]
+    },
+    {
+        "scenario": "shows an invalid email error when billing email format is wrong",
+        "billingAddress": {
+            "firstName": "Yen",
+            "lastName": "Pham",
+            "email": "invalid-email",
+            "country": "United States",
+            "state": "Alabama",
+            "city": "City",
+            "add1": "Address1",
+            "zipCode": "1234",
+            "phoneNum": "0198382828"
+        },
+        "expectedErrors": [
+            "Wrong email"
+        ]
+    }
+]

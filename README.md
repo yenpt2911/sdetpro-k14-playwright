@@ -14,6 +14,7 @@ A comprehensive end-to-end test automation framework built with Playwright and T
 6. [Test Design Guidelines](#6-test-design-guidelines)
 7. [Environment Configuration](#7-environment-configuration)
 8. [Recommendations](#8-recommendations)
+9. [Playwright MCP Guide](#9-playwright-mcp-guide)
 
 ---
 
@@ -802,6 +803,10 @@ export default DefaultCheckoutUser;
 ---
 
 ## 8. Recommendations
+
+## 9. Playwright MCP Guide
+
+For browser-driven exploration before writing automation, see [PLAYWRIGHT_MCP_GUIDE.md](PLAYWRIGHT_MCP_GUIDE.md).
 
 ### Code Quality Improvements (Not Yet Implemented)
 
