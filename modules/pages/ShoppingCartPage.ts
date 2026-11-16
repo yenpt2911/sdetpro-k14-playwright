@@ -21,4 +21,9 @@ export default class ShoppingCartPage {
     public totalComponent(): TotalComponent {
         return new TotalComponent(this.page.locator(TotalComponent.selectorValue));
     }
+
+    public async productNames(): Promise<string[]> {
+        const rows = await this.page.locator(CartItemRowComponent.selectorValue).all();
+        return Promise.all(rows.map(row => row.locator('.product').innerText()));
+    }
 }

@@ -12,6 +12,7 @@ import PaymentInformationComponent from "../../modules/components/checkout/Payme
 import { test as pageObjectFixtures, PageObjectFixtures } from "../../fixtures/PageObjectTestFixture";
 import {test as globalTestAll} from "../../fixtures/GlobalBeforeAllFixture";
 import{ mergeTests} from "@playwright/test";
+import BaseItemDetailsComponent from "../../modules/components/BaseItemDetailsComponent";
 
 
 /***
@@ -21,8 +22,8 @@ import{ mergeTests} from "@playwright/test";
 */
 
 export const test = mergeTests(pageObjectFixtures, globalTestAll).extend<{ orderComputerFlow: OrderComputerFlow }>({
-    orderComputerFlow: async ({ checkoutPage, checkoutOptionsPage, computerDetailsPage, shoppingCartPage }, use) => {
-        const orderComputerFlow = new OrderComputerFlow({ checkoutPage, checkoutOptionsPage, computerDetailsPage, shoppingCartPage });
+    orderComputerFlow: async ({ checkoutPage, checkoutOptionsPage, computerDetailsPage, shoppingCartPage, jewelryDetailsPage }, use) => {
+        const orderComputerFlow = new OrderComputerFlow({ checkoutPage, checkoutOptionsPage, computerDetailsPage, shoppingCartPage, jewelryDetailsPage });
         await use(orderComputerFlow);
     }
 });
@@ -34,8 +35,19 @@ export default class OrderComputerFlow {
     private productQuantity = 0;
 
     constructor(
-        private readonly fixture: Pick<PageObjectFixtures, 'checkoutPage' | 'checkoutOptionsPage' | 'computerDetailsPage' | 'shoppingCartPage'>
+        private readonly fixture: Pick<PageObjectFixtures, 'checkoutPage' | 'checkoutOptionsPage' | 'computerDetailsPage' | 'shoppingCartPage' | 'jewelryDetailsPage'>
     ) {
+    }
+
+    public async addJewelryToCart(expectedPrice: number, expectedQuantity: number): Promise<void> {
+        const jewelryComp = this.fixture.jewelryDetailsPage.itemDetailsComponent();
+        expect(await jewelryComp.getProductPrice()).toBe(expectedPrice);
+        expect(await jewelryComp.getProductQuantity()).toBe(expectedQuantity);
+        await jewelryComp.clickOnAddToCartBtn();
+        await this.fixture.jewelryDetailsPage.waitForProductAddedNotification();
+        await this.fixture.jewelryDetailsPage.headerComponent().clickOnShoppingCartLink();
+        this.productQuantity = expectedQuantity;
+        this.totalPrice = expectedPrice * expectedQuantity;
     }
 
     async buildCompSpecAndAddToCart(
@@ -97,8 +109,8 @@ export default class OrderComputerFlow {
         }
         const priceCategories = await totalComponent.priceCategories();
         const subTotal = priceCategories["Sub-Total:"];
-        const shippingFee = priceCategories["Shipping:"];
-        const tax = priceCategories["Tax:"];
+        const shippingFee = priceCategories["Shipping:"] || 0;
+        const tax = priceCategories["Tax:"] || 0;
         const total = priceCategories["Total:"];
         expect(total).toBe(subTotal + shippingFee + tax);
         expect(total).toBe(this.totalPrice);

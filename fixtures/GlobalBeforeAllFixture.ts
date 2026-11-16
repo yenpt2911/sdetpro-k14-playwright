@@ -4,8 +4,11 @@ export const test = globalBeforeAll.extend<{ page: any }, { forEachWorker: void 
     forEachWorker: [async ({ browser }, use) => {
         console.log('Global before all setup');
         const page = await browser.newPage();
-        await page.goto('https://demowebshop.tricentis.com/');
-        await page.waitForTimeout(3 * 1000);
+        try {
+            await page.goto(process.env.BASE_URL || 'https://demowebshop.tricentis.com/', { waitUntil: 'domcontentloaded' });
+        } catch (error) {
+            console.warn(`Global warm-up skipped: ${error}`);
+        }
         await page.close();
 
         await use();

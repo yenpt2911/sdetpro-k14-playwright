@@ -1,15 +1,16 @@
 import { Locator } from "@playwright/test";
 import { selector } from "../SelectorDecorator";
 
-@selector(".car-item-row")
+@selector(".cart-item-row")
 export default class CartItemRowComponent {
+    public static selectorValue = ".cart-item-row";
     protected component: Locator;
 
     private unitPriceSel = '.product-unit-price';
     private quantityInputSel = 'input[class*="qty-input"]';
     private subtotalSel = '.product-subtotal';
 
-    protected constructor(component: Locator) {
+    public constructor(component: Locator) {
         this.component = component;
     }
 

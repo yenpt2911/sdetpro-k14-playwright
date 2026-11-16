@@ -1,0 +1,39 @@
+[
+    {
+        "testCaseId": "TC-004",
+        "description": "all fields empty",
+        "data": {},
+        "expectedFieldErrors": [
+            "First name is required.",
+            "Last name is required.",
+            "Email is required.",
+            "Password is required."
+        ]
+    },
+    {
+        "testCaseId": "TC-005",
+        "description": "invalid email format",
+        "data": {
+            "gender": "male",
+            "firstName": "Invalid",
+            "lastName": "Email",
+            "email": "not-an-email",
+            "password": "Test@12345",
+            "confirmPassword": "Test@12345"
+        },
+        "expectedFieldErrors": ["Wrong email"]
+    },
+    {
+        "testCaseId": "TC-007",
+        "description": "password and confirm password mismatch",
+        "data": {
+            "gender": "female",
+            "firstName": "Mismatch",
+            "lastName": "Password",
+            "email": "mismatch.test@example.com",
+            "password": "Test@12345",
+            "confirmPassword": "Different@123"
+        },
+        "expectedFieldErrors": ["The password and confirmation password do not match."]
+    }
+]
